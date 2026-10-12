@@ -6,7 +6,7 @@ import sys
 
 # Import custom modules
 from modules.data_validation import validate_dataset, generate_validation_report
-from modules.eda import run_eda, recommend_components, build_preview, CHART_INFO
+from modules.eda import run_eda, recommend_components, build_preview, CHART_INFO, CHART_CATALOG
 from modules.hypothesis_tests import run_hypothesis_tests
 from modules.sensory_analysis import run_sensory_analysis
 from modules.ml_models import run_ml_pipeline
@@ -184,6 +184,8 @@ if 'validation_report' not in st.session_state:
     st.session_state.validation_report = None
 if 'page' not in st.session_state:
     st.session_state.page = "home"
+if 'eda_category' not in st.session_state:
+    st.session_state.eda_category = list(CHART_CATALOG.keys())[0]
 
 def set_page(page_name):
     st.session_state.page = page_name
@@ -214,7 +216,15 @@ with st.sidebar:
     nav_button("validate", "Check data quality")
 
     nav_section("Analyze")
-    nav_button("eda", "Explore data")
+    is_eda_active = st.session_state.page == "eda"
+    with st.expander("Explore data", expanded=is_eda_active):
+        for category in CHART_CATALOG.keys():
+            is_active_category = is_eda_active and st.session_state.eda_category == category
+            if st.button(category, key=f"nav_eda_{category}", width="stretch",
+                        type="primary" if is_active_category else "secondary"):
+                st.session_state.eda_category = category
+                set_page("eda")
+                st.rerun()
     nav_button("hypothesis", "Test hypotheses")
     nav_button("sensory", "Sensory analysis")
 
@@ -490,14 +500,16 @@ elif st.session_state.page == "eda":
                 "font_size": chart_font_size,
             }
             
-            st.markdown("### What would you like to see?")
-            st.caption("⭐ marks the chart types recommended for your current variable selection. Each card shows a live preview.")
+            st.markdown(f"### {st.session_state.eda_category}")
+            st.caption("⭐ marks the chart types recommended for your current variable selection. Each card shows a live preview. Switch categories from the \"Explore data\" menu in the sidebar.")
+            
+            show_summary = st.checkbox("📋 Also include Summary Statistics table", value=False, key="include_summary_stats")
             
             recommended = recommend_components(df, eda_vars)
             preview_df = df[eda_vars]
             
-            chart_names = list(CHART_INFO.keys())
-            eda_options = []
+            chart_names = list(CHART_CATALOG[st.session_state.eda_category].keys())
+            eda_options = ["Summary Statistics"] if show_summary else []
             gallery_cols = st.columns(3)
             for idx, name in enumerate(chart_names):
                 info = CHART_INFO[name]
@@ -507,18 +519,15 @@ elif st.session_state.page == "eda":
                         badge = " ⭐" if is_recommended else ""
                         st.markdown(f"**{info['icon']} {name}{badge}**")
                         st.caption(info['desc'])
-                        if name == "Summary Statistics":
-                            st.caption("📋 Table view — no chart preview")
+                        preview_fig = build_preview(name, preview_df, chart_settings)
+                        if preview_fig is not None:
+                            st.plotly_chart(
+                                preview_fig, use_container_width=True,
+                                config={"staticPlot": True, "displayModeBar": False},
+                                key=f"preview_{name}"
+                            )
                         else:
-                            preview_fig = build_preview(name, preview_df, chart_settings)
-                            if preview_fig is not None:
-                                st.plotly_chart(
-                                    preview_fig, use_container_width=True,
-                                    config={"staticPlot": True, "displayModeBar": False},
-                                    key=f"preview_{name}"
-                                )
-                            else:
-                                st.caption("Not enough matching variables selected")
+                            st.caption("Not enough matching variables selected")
                         include = st.checkbox("Include", value=is_recommended, key=f"include_{name}")
                         if include:
                             eda_options.append(name)
