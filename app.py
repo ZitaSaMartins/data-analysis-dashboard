@@ -386,8 +386,6 @@ elif st.session_state.page == "validate":
             )
         
         if dependent_vars and independent_vars:
-            st.session_state.dependent_vars = dependent_vars
-            st.session_state.independent_vars = independent_vars
             st.success("✅ Variable roles configured!")
 
 
