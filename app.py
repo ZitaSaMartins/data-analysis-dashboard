@@ -17,7 +17,7 @@ st.set_page_config(
     page_title="Data Analysis Dashboard",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Custom styling - Clean, student-friendly interface
@@ -123,6 +123,57 @@ st.markdown("""
         margin-bottom: 1rem;
         display: inline-block;
     }
+    
+    /* Sidebar menu - flat list style with chevrons, like a help-center nav */
+    section[data-testid="stSidebar"] p.nav-section-label {
+        color: #8DB2D9;
+        opacity: 0.75;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 1.25rem 0 0.25rem 0.25rem;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button {
+        position: relative;
+        width: 100%;
+        text-align: left;
+        background-color: transparent;
+        color: #C7DCE5;
+        border: none;
+        border-left: 3px solid transparent;
+        border-radius: 0;
+        padding: 0.55rem 1.6rem 0.55rem 0.9rem;
+        font-weight: 500;
+        font-size: 0.92rem;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button::after {
+        content: "\203A";
+        position: absolute;
+        right: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.1rem;
+        opacity: 0.55;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background-color: rgba(255,255,255,0.08);
+        color: #ffffff;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+        background-color: rgba(255,255,255,0.1);
+        color: #ffffff;
+        border-left: 3px solid #FFBF3E;
+        font-weight: 700;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+        background-color: rgba(255,255,255,0.14);
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -134,88 +185,66 @@ if 'validation_report' not in st.session_state:
 if 'page' not in st.session_state:
     st.session_state.page = "home"
 
-def go_home():
-    st.session_state.page = "home"
-
 def set_page(page_name):
     st.session_state.page = page_name
 
-# HOME PAGE - Menu with cards
+# Sidebar navigation - flat list with section labels and chevrons, always visible
+with st.sidebar:
+    st.markdown("## 📊 Navigation")
+
+    if st.session_state.df is not None:
+        st.success(f"✅ {st.session_state.df.shape[0]} rows × {st.session_state.df.shape[1]} cols")
+    else:
+        st.caption("No data loaded yet")
+
+    def nav_button(page_name, label):
+        is_active = st.session_state.page == page_name
+        if st.button(label, key=f"nav_{page_name}", width="stretch",
+                    type="primary" if is_active else "secondary"):
+            set_page(page_name)
+            st.rerun()
+
+    def nav_section(title):
+        st.markdown(f'<p class="nav-section-label">{title}</p>', unsafe_allow_html=True)
+
+    nav_button("home", "Home")
+
+    nav_section("Prepare")
+    nav_button("upload", "Upload data")
+    nav_button("validate", "Check data quality")
+
+    nav_section("Analyze")
+    nav_button("eda", "Explore data")
+    nav_button("hypothesis", "Test hypotheses")
+    nav_button("sensory", "Sensory analysis")
+
+    nav_section("Advanced analysis")
+    nav_button("ml", "Build predictions")
+    nav_button("recommend", "Get recommendations")
+
+    nav_section("Help")
+    nav_button("help_data", "Getting started")
+    nav_button("help_analysis", "Analysis types")
+
+
+# HOME PAGE - Welcome & status
 if st.session_state.page == "home":
     st.markdown('<p class="main-header">📊 Data Analysis Dashboard</p>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Your easy guide to understanding data without coding</p>', unsafe_allow_html=True)
     
-    # Step indicator
-    st.markdown("---")
-    st.markdown('<div class="section-header"><span class="step-number">1</span> Upload & Prepare Your Data</div>', unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button("📤 Upload Data", key="btn_upload", use_container_width=True, 
-                    help="Start here: Upload your Excel or CSV file"):
-            set_page("upload")
-            st.rerun()
-    
-    with col2:
-        if st.button("✅ Check Data Quality", key="btn_validate", use_container_width=True,
-                    help="Verify your data is ready for analysis"):
-            set_page("validate")
-            st.rerun()
-    
-    with col3:
-        if st.button("❓ Help", key="btn_help_step1", use_container_width=True):
-            set_page("help_data")
-            st.rerun()
-    
-    st.markdown("---")
-    st.markdown('<div class="section-header"><span class="step-number">2</span> Analyze Your Data</div>', unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button("🔍 Explore Data", key="btn_eda", use_container_width=True,
-                    help="Visualizations, patterns, relationships"):
-            set_page("eda")
-            st.rerun()
-    
-    with col2:
-        if st.button("📊 Test Hypotheses", key="btn_hypothesis", use_container_width=True,
-                    help="Answer statistical questions"):
-            set_page("hypothesis")
-            st.rerun()
-    
-    with col3:
-        if st.button("👃 Sensory Analysis", key="btn_sensory", use_container_width=True,
-                    help="Consumer preferences & taste tests"):
-            set_page("sensory")
-            st.rerun()
-    
-    st.markdown("---")
-    st.markdown('<div class="section-header"><span class="step-number">3</span> Advanced Analysis</div>', unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button("🤖 Build Predictions", key="btn_ml", use_container_width=True,
-                    help="Train machine learning models"):
-            set_page("ml")
-            st.rerun()
-    
-    with col2:
-        if st.button("💡 Get Recommendations", key="btn_recommend", use_container_width=True,
-                    help="Learn which models to use"):
-            set_page("recommend")
-            st.rerun()
-    
-    with col3:
-        if st.button("❓ Help", key="btn_help_advanced", use_container_width=True):
-            set_page("help_analysis")
-            st.rerun()
-    
-    # Display current status
     st.markdown("---")
     if st.session_state.df is not None:
         st.success(f"✅ Data loaded: {st.session_state.df.shape[0]} rows × {st.session_state.df.shape[1]} columns")
     else:
-        st.info("👉 Start by uploading your data file above")
+        st.info("👉 Use the sidebar menu to get started — begin with **Upload Data**")
+    
+    st.markdown("### 🗺️ How it works")
+    st.markdown("""
+    Use the **menu in the sidebar** to navigate between steps:
+    1. **Upload & Prepare** — Upload Data, then Check Data Quality
+    2. **Analyze** — Explore Data, Test Hypotheses, Sensory Analysis
+    3. **Advanced** — Build Predictions, Get Recommendations
+    """)
     
     # Footer
     st.markdown("---")
@@ -229,10 +258,6 @@ if st.session_state.page == "home":
 
 # PAGE 1: Upload Data
 if st.session_state.page == "upload":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     st.markdown("## 📤 Upload Your Data")
     st.markdown("Choose an Excel or CSV file with your data")
     
@@ -300,10 +325,6 @@ if st.session_state.page == "upload":
 
 # PAGE 2: Data Validation
 elif st.session_state.page == "validate":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -387,14 +408,13 @@ elif st.session_state.page == "validate":
         
         if dependent_vars and independent_vars:
             st.success("✅ Variable roles configured!")
+            if st.button("🤖 Go to Build Predictions"):
+                set_page("ml")
+                st.rerun()
 
 
 # PAGE 3: EDA
 elif st.session_state.page == "eda":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -406,39 +426,96 @@ elif st.session_state.page == "eda":
         
         df = st.session_state.df
         
-        st.markdown("### What would you like to see?")
-        
+        st.markdown("### Select Variables to Analyze")
         col1, col2 = st.columns(2)
         with col1:
-            show_stats = st.checkbox("📊 Summary Statistics", value=True, help="Numbers like mean, median, etc.")
-            show_dist = st.checkbox("📈 Distributions", value=True, help="How data is spread out")
-        
+            eda_dependent = st.multiselect(
+                "Dependent Variables (Target/Response):",
+                options=df.columns,
+                default=[v for v in st.session_state.get('dependent_vars', []) if v in df.columns],
+                key="eda_dependent_vars",
+                help="Variables you want to predict or analyze"
+            )
         with col2:
-            show_corr = st.checkbox("🔗 Correlations", value=True, help="How variables relate to each other")
-            show_box = st.checkbox("📦 Box Plots", value=False, help="Distributions by group")
+            eda_independent = st.multiselect(
+                "Independent Variables (Features/Predictors):",
+                options=[c for c in df.columns if c not in eda_dependent],
+                default=[v for v in st.session_state.get('independent_vars', []) if v in df.columns and v not in eda_dependent],
+                key="eda_independent_vars",
+                help="Variables you'll use to predict or explain"
+            )
         
-        show_scatter = st.checkbox("⚡ Scatter Plots", value=False, help="Relationships between two variables")
+        eda_vars = eda_dependent + [v for v in eda_independent if v not in eda_dependent]
         
-        eda_options = []
-        if show_stats: eda_options.append("Summary Statistics")
-        if show_dist: eda_options.append("Distributions")
-        if show_corr: eda_options.append("Correlations")
-        if show_box: eda_options.append("Box Plots")
-        if show_scatter: eda_options.append("Scatter Plots")
-        
-        if st.button("🚀 Generate Analysis", type="primary"):
-            if eda_options:
-                run_eda(df, eda_options)
-            else:
-                st.warning("Select at least one option")
+        if not eda_vars:
+            st.info("👆 Select at least one dependent or independent variable to analyze")
+        else:
+            st.markdown("### What would you like to see?")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                show_stats = st.checkbox("📊 Summary Statistics", value=True, help="Numbers like mean, median, etc.")
+                show_dist = st.checkbox("📈 Distributions", value=True, help="How data is spread out")
+            
+            with col2:
+                show_corr = st.checkbox("🔗 Correlations", value=True, help="How variables relate to each other")
+                show_box = st.checkbox("📦 Box Plots", value=False, help="Distributions by group")
+            
+            show_scatter = st.checkbox("⚡ Scatter Plots", value=False, help="Relationships between two variables")
+            
+            eda_options = []
+            if show_stats: eda_options.append("Summary Statistics")
+            if show_dist: eda_options.append("Distributions")
+            if show_corr: eda_options.append("Correlations")
+            if show_box: eda_options.append("Box Plots")
+            if show_scatter: eda_options.append("Scatter Plots")
+            
+            with st.expander("🎨 Chart Settings"):
+                s1, s2, s3 = st.columns(3)
+                with s1:
+                    chart_template = st.selectbox(
+                        "Theme",
+                        ["plotly_white", "plotly", "plotly_dark", "ggplot2", "seaborn", "simple_white"],
+                        key="chart_template"
+                    )
+                    chart_palette = st.selectbox(
+                        "Color palette (categories)",
+                        ["Plotly", "D3", "T10", "G10", "Set1", "Set2", "Set3", "Pastel", "Bold", "Vivid", "Dark24"],
+                        key="chart_palette"
+                    )
+                with s2:
+                    chart_colorscale = st.selectbox(
+                        "Color scale (heatmap/numeric)",
+                        ["RdBu", "Viridis", "Plasma", "Blues", "Greens", "Reds", "Turbo", "Cividis", "Sunset", "Tealrose"],
+                        key="chart_colorscale"
+                    )
+                    chart_height = st.slider("Plot height (px)", 300, 900, 450, step=50, key="chart_height")
+                with s3:
+                    chart_font_family = st.selectbox(
+                        "Font",
+                        ["Arial", "Helvetica", "Times New Roman", "Courier New", "Georgia", "Verdana", "Open Sans, sans-serif"],
+                        key="chart_font_family"
+                    )
+                    chart_font_size = st.slider("Font size", 10, 24, 14, key="chart_font_size")
+            
+            chart_settings = {
+                "template": chart_template,
+                "palette": chart_palette,
+                "colorscale": chart_colorscale,
+                "height": chart_height,
+                "font_family": chart_font_family,
+                "font_size": chart_font_size,
+            }
+            
+            if st.button("🚀 Generate Analysis", type="primary"):
+                if eda_options:
+                    run_eda(df, eda_options, eda_vars, eda_dependent, eda_independent, chart_settings)
+                else:
+                    st.warning("Select at least one option")
 
 
 # PAGE 4: Hypothesis Testing
 elif st.session_state.page == "hypothesis":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -454,10 +531,6 @@ elif st.session_state.page == "hypothesis":
 
 # PAGE 5: Sensory Analysis
 elif st.session_state.page == "sensory":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -473,10 +546,6 @@ elif st.session_state.page == "sensory":
 
 # PAGE 6: Machine Learning
 elif st.session_state.page == "ml":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -502,10 +571,6 @@ elif st.session_state.page == "ml":
 
 # PAGE 7: Model Recommender
 elif st.session_state.page == "recommend":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     st.markdown("## 💡 Which Model Should I Use?")
     st.markdown("Get expert recommendations based on your data and question")
     
@@ -568,10 +633,6 @@ elif st.session_state.page == "recommend":
 
 # HELP PAGES
 elif st.session_state.page == "help_data":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     st.markdown("## ❓ Help: Getting Started")
     
     with st.expander("How do I prepare my data?", expanded=True):
@@ -612,10 +673,6 @@ elif st.session_state.page == "help_data":
         """)
 
 elif st.session_state.page == "help_analysis":
-    if st.button("← Back to Menu"):
-        go_home()
-        st.rerun()
-    
     st.markdown("## ❓ Help: Analysis Types")
     
     with st.expander("🔍 Explore Data", expanded=True):

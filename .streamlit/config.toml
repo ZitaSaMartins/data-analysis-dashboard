@@ -1,0 +1,20 @@
+[theme]
+primaryColor = "#00254E"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#C7DCE5"
+textColor = "#565651"
+borderColor = "#8DB2D9"
+linkColor = "#4E6D93"
+blueColor = "#4E6D93"
+greenColor = "#7BD9B0"
+yellowColor = "#FFBF3E"
+grayColor = "#565651"
+
+chartCategoricalColors = ["#00254E", "#4E6D93", "#8DB2D9", "#7BD9B0", "#FFBF3E", "#565651", "#C7DCE5"]
+
+[theme.sidebar]
+backgroundColor = "#00254E"
+secondaryBackgroundColor = "#4E6D93"
+textColor = "#C7DCE5"
+primaryColor = "#FFBF3E"
+borderColor = "#4E6D93"

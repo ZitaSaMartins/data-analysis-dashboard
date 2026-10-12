@@ -1,29 +1,72 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 from scipy import stats
 
-sns.set_style("whitegrid")
+DEFAULT_SETTINGS = {
+    "template": "plotly_white",
+    "palette": "Plotly",
+    "colorscale": "RdBu",
+    "height": 450,
+    "font_family": "Arial",
+    "font_size": 14,
+}
 
-def run_eda(df: pd.DataFrame, components: list):
-    """Run selected EDA components."""
-    
+
+def _settings(chart_settings):
+    """Merge user-provided chart settings with defaults."""
+    merged = DEFAULT_SETTINGS.copy()
+    if chart_settings:
+        merged.update({k: v for k, v in chart_settings.items() if v is not None})
+    return merged
+
+
+def _palette(settings):
+    return getattr(px.colors.qualitative, settings["palette"], px.colors.qualitative.Plotly)
+
+
+def _plot(fig, settings, title=None):
+    """Apply shared theme/font/size and render so every chart fits its container responsively."""
+    fig.update_layout(
+        template=settings["template"],
+        font=dict(family=settings["font_family"], size=settings["font_size"]),
+        height=settings["height"],
+        autosize=True,
+        margin=dict(l=40, r=20, t=60 if title else 30, b=40),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    if title:
+        fig.update_layout(title=dict(text=title, font=dict(size=settings["font_size"] + 4)))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def run_eda(df: pd.DataFrame, components: list, variables: list = None,
+            dependent_vars: list = None, independent_vars: list = None,
+            chart_settings: dict = None):
+    """Run selected EDA components, restricted to the chosen dependent/independent variables."""
+    settings = _settings(chart_settings)
+    dependent_vars = dependent_vars or []
+    independent_vars = independent_vars or []
+
+    # Work only with the variables selected on the EDA page; fall back to all columns
+    cols = variables if variables else df.columns.tolist()
+    data = df[cols]
+
     if "Summary Statistics" in components:
-        show_summary_statistics(df)
-    
+        show_summary_statistics(data)
+
     if "Distributions" in components:
-        show_distributions(df)
-    
+        show_distributions(data, settings)
+
     if "Correlations" in components:
-        show_correlations(df)
-    
+        show_correlations(data, settings)
+
     if "Box Plots" in components:
-        show_box_plots(df)
-    
+        show_box_plots(data, settings, dependent_vars, independent_vars)
+
     if "Scatter Plots" in components:
-        show_scatter_plots(df)
+        show_scatter_plots(data, settings, dependent_vars, independent_vars)
 
 
 def show_summary_statistics(df: pd.DataFrame):
@@ -33,7 +76,7 @@ def show_summary_statistics(df: pd.DataFrame):
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     
     if not numeric_cols:
-        st.info("No numeric columns found for summary statistics.")
+        st.info("No numeric columns selected for summary statistics.")
         return
     
     summary = df[numeric_cols].describe().T
@@ -57,17 +100,18 @@ def show_summary_statistics(df: pd.DataFrame):
     st.caption("Kurtosis: Negative (flat) | 0 (normal) | Positive (peaked)")
 
 
-def show_distributions(df: pd.DataFrame):
+def show_distributions(df: pd.DataFrame, settings: dict):
     """Display distributions of columns."""
     st.markdown("### Data Distributions")
     
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    palette = _palette(settings)
     
     if numeric_cols:
         st.markdown("#### Numeric Distributions (Histograms)")
         
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([3, 1])
         
         with col1:
             selected_cols = st.multiselect(
@@ -76,28 +120,18 @@ def show_distributions(df: pd.DataFrame):
                 default=numeric_cols[:min(3, len(numeric_cols))],
                 key="numeric_dist"
             )
+        with col2:
+            n_bins = st.slider("Bins", 5, 100, 30, key="dist_bins")
         
-        if selected_cols:
-            # Create subplots
-            n_cols = len(selected_cols)
-            n_rows = (n_cols + 1) // 2
-            
-            fig, axes = plt.subplots(n_rows, 2, figsize=(12, 4*n_rows))
-            axes = axes.flatten() if n_cols > 1 else [axes]
-            
-            for idx, col in enumerate(selected_cols):
-                axes[idx].hist(df[col].dropna(), bins=30, color='steelblue', edgecolor='black', alpha=0.7)
-                axes[idx].set_title(f'Distribution of {col}', fontweight='bold')
-                axes[idx].set_xlabel(col)
-                axes[idx].set_ylabel('Frequency')
-                axes[idx].grid(alpha=0.3)
-            
-            # Hide extra subplots
-            for idx in range(len(selected_cols), len(axes)):
-                axes[idx].axis('off')
-            
-            plt.tight_layout()
-            st.pyplot(fig)
+        for idx, col in enumerate(selected_cols):
+            fig = px.histogram(
+                df, x=col, nbins=n_bins,
+                color_discrete_sequence=[palette[idx % len(palette)]],
+                opacity=0.85,
+            )
+            fig.update_xaxes(title=col)
+            fig.update_yaxes(title='Frequency')
+            _plot(fig, settings, title=f'Distribution of {col}')
     
     if cat_cols:
         st.markdown("#### Categorical Distributions")
@@ -109,43 +143,34 @@ def show_distributions(df: pd.DataFrame):
             key="cat_dist"
         )
         
-        if selected_cat:
-            for col in selected_cat:
-                fig, ax = plt.subplots(figsize=(10, 4))
-                
-                value_counts = df[col].value_counts().head(10)
-                value_counts.plot(kind='bar', ax=ax, color='steelblue', edgecolor='black')
-                ax.set_title(f'Distribution of {col}', fontweight='bold', fontsize=12)
-                ax.set_xlabel(col)
-                ax.set_ylabel('Count')
-                ax.grid(alpha=0.3, axis='y')
-                plt.xticks(rotation=45, ha='right')
-                plt.tight_layout()
-                
-                st.pyplot(fig)
+        for idx, col in enumerate(selected_cat):
+            value_counts = df[col].value_counts().head(10).reset_index()
+            value_counts.columns = [col, 'Count']
+            fig = px.bar(
+                value_counts, x=col, y='Count',
+                color_discrete_sequence=[palette[idx % len(palette)]],
+            )
+            _plot(fig, settings, title=f'Distribution of {col}')
 
 
-def show_correlations(df: pd.DataFrame):
+def show_correlations(df: pd.DataFrame, settings: dict):
     """Display correlation matrix."""
     st.markdown("### Correlation Analysis")
     
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     
     if len(numeric_cols) < 2:
-        st.info("Need at least 2 numeric columns for correlation analysis.")
+        st.info("Need at least 2 numeric columns selected for correlation analysis.")
         return
     
     # Correlation matrix
     corr = df[numeric_cols].corr()
     
-    # Create heatmap
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(corr, annot=True, fmt='.2f', cmap='coolwarm', center=0, 
-                square=True, ax=ax, cbar_kws={'label': 'Correlation'})
-    ax.set_title('Correlation Matrix', fontweight='bold', fontsize=14)
-    plt.tight_layout()
-    
-    st.pyplot(fig)
+    fig = px.imshow(
+        corr, text_auto='.2f', color_continuous_scale=settings["colorscale"],
+        zmin=-1, zmax=1, aspect="auto",
+    )
+    _plot(fig, settings, title='Correlation Matrix')
     
     # Find strong correlations
     st.markdown("#### Strong Correlations (|r| > 0.7)")
@@ -166,101 +191,110 @@ def show_correlations(df: pd.DataFrame):
         st.info("No strong correlations found.")
 
 
-def show_box_plots(df: pd.DataFrame):
+def show_box_plots(df: pd.DataFrame, settings: dict, dependent_vars: list, independent_vars: list):
     """Display box plots for numeric columns grouped by categorical."""
     st.markdown("### Box Plots")
     
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
     
     if not numeric_cols or not cat_cols:
-        st.info("Need both numeric and categorical columns for box plots.")
+        st.info("Need both a numeric and a categorical variable selected for box plots.")
         return
     
-    col1, col2 = st.columns(2)
+    dep_numeric = [c for c in dependent_vars if c in numeric_cols]
+    indep_cat = [c for c in independent_vars if c in cat_cols]
+    
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         selected_numeric = st.selectbox(
-            "Select numeric variable:",
+            "Numeric variable (value):",
             numeric_cols,
+            index=numeric_cols.index(dep_numeric[0]) if dep_numeric else 0,
             key="box_numeric"
         )
     
     with col2:
         selected_cat = st.selectbox(
-            "Select categorical variable (grouping):",
+            "Categorical variable (grouping):",
             cat_cols,
+            index=cat_cols.index(indep_cat[0]) if indep_cat else 0,
             key="box_cat"
         )
     
+    with col3:
+        top_n = st.slider("Max categories shown", 2, 20, 10, key="box_top_n")
+    
     if selected_numeric and selected_cat:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Limit categories to top 10 to avoid overcrowding
-        top_cats = df[selected_cat].value_counts().head(10).index
+        # Limit categories to avoid overcrowding
+        top_cats = df[selected_cat].value_counts().head(top_n).index
         df_filtered = df[df[selected_cat].isin(top_cats)]
         
-        sns.boxplot(data=df_filtered, x=selected_cat, y=selected_numeric, ax=ax)
-        ax.set_title(f'{selected_numeric} by {selected_cat}', fontweight='bold', fontsize=12)
-        plt.xticks(rotation=45, ha='right')
-        plt.tight_layout()
-        
-        st.pyplot(fig)
+        fig = px.box(
+            df_filtered, x=selected_cat, y=selected_numeric, color=selected_cat,
+            color_discrete_sequence=_palette(settings), points="outliers",
+        )
+        fig.update_xaxes(title=selected_cat)
+        fig.update_yaxes(title=selected_numeric)
+        fig.update_layout(showlegend=False)
+        _plot(fig, settings, title=f'{selected_numeric} by {selected_cat}')
 
 
-def show_scatter_plots(df: pd.DataFrame):
+def show_scatter_plots(df: pd.DataFrame, settings: dict, dependent_vars: list, independent_vars: list):
     """Display scatter plots for numeric variables."""
     st.markdown("### Scatter Plots")
     
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     
     if len(numeric_cols) < 2:
-        st.info("Need at least 2 numeric columns for scatter plots.")
+        st.info("Need at least 2 numeric columns selected for scatter plots.")
         return
     
-    col1, col2 = st.columns(2)
+    dep_numeric = [c for c in dependent_vars if c in numeric_cols]
+    indep_numeric = [c for c in independent_vars if c in numeric_cols]
+    
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         x_var = st.selectbox(
             "Select X variable:",
             numeric_cols,
+            index=numeric_cols.index(indep_numeric[0]) if indep_numeric else 0,
             key="scatter_x"
         )
     
     with col2:
+        y_options = [col for col in numeric_cols if col != x_var]
+        default_y = next((c for c in dep_numeric if c != x_var), y_options[0])
         y_var = st.selectbox(
             "Select Y variable:",
-            [col for col in numeric_cols if col != x_var],
+            y_options,
+            index=y_options.index(default_y),
             key="scatter_y"
         )
     
+    with col3:
+        marker_size = st.slider("Marker size", 4, 20, 9, key="scatter_size")
+    
+    # Color by categorical if available
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    color_by = None
+    
+    if cat_cols:
+        use_color = st.checkbox("Color by categorical variable?", key="scatter_use_color")
+        if use_color:
+            color_by = st.selectbox("Select coloring variable:", cat_cols, key="scatter_color_by")
+    
     if x_var and y_var:
-        # Color by categorical if available
-        cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-        color_by = None
-        
-        if cat_cols:
-            use_color = st.checkbox("Color by categorical variable?")
-            if use_color:
-                color_by = st.selectbox("Select coloring variable:", cat_cols)
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        if color_by:
-            for category in df[color_by].unique():
-                mask = df[color_by] == category
-                ax.scatter(df[mask][x_var], df[mask][y_var], label=category, alpha=0.6, s=50)
-            ax.legend()
-        else:
-            ax.scatter(df[x_var], df[y_var], alpha=0.6, s=50, color='steelblue')
-        
-        ax.set_xlabel(x_var, fontweight='bold')
-        ax.set_ylabel(y_var, fontweight='bold')
-        ax.set_title(f'{y_var} vs {x_var}', fontweight='bold', fontsize=12)
-        ax.grid(alpha=0.3)
-        
-        plt.tight_layout()
-        st.pyplot(fig)
+        fig = px.scatter(
+            df, x=x_var, y=y_var, color=color_by,
+            color_discrete_sequence=_palette(settings), opacity=0.75,
+        )
+        fig.update_traces(marker=dict(size=marker_size, line=dict(width=0.5, color='white')))
+        fig.update_xaxes(title=x_var)
+        fig.update_yaxes(title=y_var)
+        _plot(fig, settings, title=f'{y_var} vs {x_var}')
         
         # Add correlation coefficient
         corr = df[[x_var, y_var]].corr().iloc[0, 1]
