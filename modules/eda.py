@@ -13,6 +13,14 @@ DEFAULT_SETTINGS = {
     "font_size": 14,
 }
 
+CHART_INFO = {
+    "Summary Statistics": {"icon": "📊", "desc": "Means, std dev, skewness & kurtosis as a table."},
+    "Distributions": {"icon": "📈", "desc": "How values are spread out (histograms/bar charts)."},
+    "Correlations": {"icon": "🔗", "desc": "Which numeric variables move together."},
+    "Box Plots": {"icon": "📦", "desc": "Compare a numeric variable across categories."},
+    "Scatter Plots": {"icon": "⚡", "desc": "Relationship between two numeric variables."},
+}
+
 
 def _settings(chart_settings):
     """Merge user-provided chart settings with defaults."""
@@ -41,6 +49,77 @@ def _plot(fig, settings, title=None):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def _category_colors(categories: list, settings: dict, key_prefix: str) -> dict:
+    """Let the user override each category's color after the chart is generated."""
+    palette = _palette(settings)
+    colors = {}
+    cols = st.columns(min(len(categories), 4) or 1)
+    for i, cat in enumerate(categories):
+        default_color = palette[i % len(palette)]
+        with cols[i % len(cols)]:
+            colors[cat] = st.color_picker(str(cat), default_color, key=f"{key_prefix}_color_{cat}")
+    return colors
+
+
+def recommend_components(df: pd.DataFrame, variables: list = None) -> dict:
+    """Flag which chart types are a good fit for the currently selected variables."""
+    cols = variables if variables else df.columns.tolist()
+    data = df[cols]
+    numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+    cat_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
+    return {
+        "Summary Statistics": len(numeric_cols) >= 1,
+        "Distributions": len(cols) >= 1,
+        "Correlations": len(numeric_cols) >= 2,
+        "Box Plots": len(numeric_cols) >= 1 and len(cat_cols) >= 1,
+        "Scatter Plots": len(numeric_cols) >= 2,
+    }
+
+
+def build_preview(kind: str, df: pd.DataFrame, chart_settings: dict = None):
+    """Build a small, read-only preview of a chart type using the real selected data."""
+    settings = _settings(chart_settings)
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    palette = _palette(settings)
+    fig = None
+
+    if kind == "Distributions":
+        if numeric_cols:
+            fig = px.histogram(df, x=numeric_cols[0], nbins=20, color_discrete_sequence=[palette[0]])
+        elif cat_cols:
+            vc = df[cat_cols[0]].value_counts().head(6).reset_index()
+            vc.columns = [cat_cols[0], 'Count']
+            fig = px.bar(vc, x=cat_cols[0], y='Count', color_discrete_sequence=[palette[0]])
+    elif kind == "Correlations":
+        if len(numeric_cols) >= 2:
+            corr = df[numeric_cols].corr()
+            fig = px.imshow(corr, color_continuous_scale=settings["colorscale"], zmin=-1, zmax=1, aspect="auto")
+    elif kind == "Box Plots":
+        if numeric_cols and cat_cols:
+            top_cats = df[cat_cols[0]].value_counts().head(5).index
+            sample = df[df[cat_cols[0]].isin(top_cats)]
+            fig = px.box(sample, x=cat_cols[0], y=numeric_cols[0], color_discrete_sequence=palette)
+    elif kind == "Scatter Plots":
+        if len(numeric_cols) >= 2:
+            fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1],
+                              color_discrete_sequence=[palette[0]], opacity=0.7)
+
+    if fig is None:
+        return None
+
+    fig.update_layout(
+        template=settings["template"],
+        height=140,
+        margin=dict(l=4, r=4, t=4, b=4),
+        showlegend=False,
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        coloraxis_showscale=False,
+    )
+    return fig
+
+
 def run_eda(df: pd.DataFrame, components: list, variables: list = None,
             dependent_vars: list = None, independent_vars: list = None,
             chart_settings: dict = None):
@@ -67,6 +146,7 @@ def run_eda(df: pd.DataFrame, components: list, variables: list = None,
 
     if "Scatter Plots" in components:
         show_scatter_plots(data, settings, dependent_vars, independent_vars)
+
 
 
 def show_summary_statistics(df: pd.DataFrame):
@@ -124,14 +204,22 @@ def show_distributions(df: pd.DataFrame, settings: dict):
             n_bins = st.slider("Bins", 5, 100, 30, key="dist_bins")
         
         for idx, col in enumerate(selected_cols):
+            default_title = f'Distribution of {col}'
+            with st.expander(f"🎨 Customize: {default_title}"):
+                c1, c2 = st.columns([1, 2])
+                with c1:
+                    bar_color = st.color_picker("Bar color", palette[idx % len(palette)], key=f"dist_num_color_{col}")
+                with c2:
+                    custom_title = st.text_input("Title", default_title, key=f"dist_num_title_{col}")
+            
             fig = px.histogram(
                 df, x=col, nbins=n_bins,
-                color_discrete_sequence=[palette[idx % len(palette)]],
+                color_discrete_sequence=[bar_color],
                 opacity=0.85,
             )
             fig.update_xaxes(title=col)
             fig.update_yaxes(title='Frequency')
-            _plot(fig, settings, title=f'Distribution of {col}')
+            _plot(fig, settings, title=custom_title)
     
     if cat_cols:
         st.markdown("#### Categorical Distributions")
@@ -144,13 +232,21 @@ def show_distributions(df: pd.DataFrame, settings: dict):
         )
         
         for idx, col in enumerate(selected_cat):
+            default_title = f'Distribution of {col}'
+            with st.expander(f"🎨 Customize: {default_title}"):
+                c1, c2 = st.columns([1, 2])
+                with c1:
+                    bar_color = st.color_picker("Bar color", palette[idx % len(palette)], key=f"dist_cat_color_{col}")
+                with c2:
+                    custom_title = st.text_input("Title", default_title, key=f"dist_cat_title_{col}")
+            
             value_counts = df[col].value_counts().head(10).reset_index()
             value_counts.columns = [col, 'Count']
             fig = px.bar(
                 value_counts, x=col, y='Count',
-                color_discrete_sequence=[palette[idx % len(palette)]],
+                color_discrete_sequence=[bar_color],
             )
-            _plot(fig, settings, title=f'Distribution of {col}')
+            _plot(fig, settings, title=custom_title)
 
 
 def show_correlations(df: pd.DataFrame, settings: dict):
@@ -166,11 +262,25 @@ def show_correlations(df: pd.DataFrame, settings: dict):
     # Correlation matrix
     corr = df[numeric_cols].corr()
     
+    with st.expander("🎨 Customize: Correlation Matrix"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            corr_colorscale = st.selectbox(
+                "Color scale",
+                ["RdBu", "Viridis", "Plasma", "Blues", "Greens", "Reds", "Turbo", "Cividis", "Sunset", "Tealrose"],
+                index=["RdBu", "Viridis", "Plasma", "Blues", "Greens", "Reds", "Turbo", "Cividis", "Sunset", "Tealrose"].index(settings["colorscale"]) if settings["colorscale"] in ["RdBu", "Viridis", "Plasma", "Blues", "Greens", "Reds", "Turbo", "Cividis", "Sunset", "Tealrose"] else 0,
+                key="corr_colorscale"
+            )
+        with c2:
+            show_values = st.checkbox("Show values", value=True, key="corr_show_values")
+        with c3:
+            corr_title = st.text_input("Title", "Correlation Matrix", key="corr_title")
+    
     fig = px.imshow(
-        corr, text_auto='.2f', color_continuous_scale=settings["colorscale"],
+        corr, text_auto='.2f' if show_values else False, color_continuous_scale=corr_colorscale,
         zmin=-1, zmax=1, aspect="auto",
     )
-    _plot(fig, settings, title='Correlation Matrix')
+    _plot(fig, settings, title=corr_title)
     
     # Find strong correlations
     st.markdown("#### Strong Correlations (|r| > 0.7)")
@@ -230,15 +340,21 @@ def show_box_plots(df: pd.DataFrame, settings: dict, dependent_vars: list, indep
         # Limit categories to avoid overcrowding
         top_cats = df[selected_cat].value_counts().head(top_n).index
         df_filtered = df[df[selected_cat].isin(top_cats)]
+        default_title = f'{selected_numeric} by {selected_cat}'
+        
+        with st.expander(f"🎨 Customize: {default_title}"):
+            box_title = st.text_input("Title", default_title, key="box_title")
+            st.caption("Category colors:")
+            category_colors = _category_colors(list(top_cats), settings, key_prefix="box")
         
         fig = px.box(
             df_filtered, x=selected_cat, y=selected_numeric, color=selected_cat,
-            color_discrete_sequence=_palette(settings), points="outliers",
+            color_discrete_map=category_colors, points="outliers",
         )
         fig.update_xaxes(title=selected_cat)
         fig.update_yaxes(title=selected_numeric)
         fig.update_layout(showlegend=False)
-        _plot(fig, settings, title=f'{selected_numeric} by {selected_cat}')
+        _plot(fig, settings, title=box_title)
 
 
 def show_scatter_plots(df: pd.DataFrame, settings: dict, dependent_vars: list, independent_vars: list):
@@ -287,14 +403,33 @@ def show_scatter_plots(df: pd.DataFrame, settings: dict, dependent_vars: list, i
             color_by = st.selectbox("Select coloring variable:", cat_cols, key="scatter_color_by")
     
     if x_var and y_var:
+        default_title = f'{y_var} vs {x_var}'
+        palette = _palette(settings)
+        
+        with st.expander(f"🎨 Customize: {default_title}"):
+            c1, c2 = st.columns([2, 1])
+            with c1:
+                scatter_title = st.text_input("Title", default_title, key="scatter_title")
+            with c2:
+                opacity = st.slider("Opacity", 0.1, 1.0, 0.75, key="scatter_opacity")
+            
+            if color_by:
+                st.caption("Category colors:")
+                categories = sorted(df[color_by].dropna().unique().tolist())[:10]
+                category_colors = _category_colors(categories, settings, key_prefix="scatter")
+                color_kwargs = {"color_discrete_map": category_colors}
+            else:
+                marker_color = st.color_picker("Marker color", palette[0], key="scatter_color")
+                color_kwargs = {"color_discrete_sequence": [marker_color]}
+        
         fig = px.scatter(
             df, x=x_var, y=y_var, color=color_by,
-            color_discrete_sequence=_palette(settings), opacity=0.75,
+            opacity=opacity, **color_kwargs,
         )
         fig.update_traces(marker=dict(size=marker_size, line=dict(width=0.5, color='white')))
         fig.update_xaxes(title=x_var)
         fig.update_yaxes(title=y_var)
-        _plot(fig, settings, title=f'{y_var} vs {x_var}')
+        _plot(fig, settings, title=scatter_title)
         
         # Add correlation coefficient
         corr = df[[x_var, y_var]].corr().iloc[0, 1]

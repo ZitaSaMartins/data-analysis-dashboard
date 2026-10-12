@@ -6,7 +6,7 @@ import sys
 
 # Import custom modules
 from modules.data_validation import validate_dataset, generate_validation_report
-from modules.eda import run_eda
+from modules.eda import run_eda, recommend_components, build_preview, CHART_INFO
 from modules.hypothesis_tests import run_hypothesis_tests
 from modules.sensory_analysis import run_sensory_analysis
 from modules.ml_models import run_ml_pipeline
@@ -150,7 +150,7 @@ st.markdown("""
     }
     
     section[data-testid="stSidebar"] .stButton > button::after {
-        content: "\203A";
+        content: "›";
         position: absolute;
         right: 0.85rem;
         top: 50%;
@@ -450,27 +450,7 @@ elif st.session_state.page == "eda":
         if not eda_vars:
             st.info("👆 Select at least one dependent or independent variable to analyze")
         else:
-            st.markdown("### What would you like to see?")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                show_stats = st.checkbox("📊 Summary Statistics", value=True, help="Numbers like mean, median, etc.")
-                show_dist = st.checkbox("📈 Distributions", value=True, help="How data is spread out")
-            
-            with col2:
-                show_corr = st.checkbox("🔗 Correlations", value=True, help="How variables relate to each other")
-                show_box = st.checkbox("📦 Box Plots", value=False, help="Distributions by group")
-            
-            show_scatter = st.checkbox("⚡ Scatter Plots", value=False, help="Relationships between two variables")
-            
-            eda_options = []
-            if show_stats: eda_options.append("Summary Statistics")
-            if show_dist: eda_options.append("Distributions")
-            if show_corr: eda_options.append("Correlations")
-            if show_box: eda_options.append("Box Plots")
-            if show_scatter: eda_options.append("Scatter Plots")
-            
-            with st.expander("🎨 Chart Settings"):
+            with st.expander("🎨 Chart Settings", expanded=False):
                 s1, s2, s3 = st.columns(3)
                 with s1:
                     chart_template = st.selectbox(
@@ -506,6 +486,39 @@ elif st.session_state.page == "eda":
                 "font_family": chart_font_family,
                 "font_size": chart_font_size,
             }
+            
+            st.markdown("### What would you like to see?")
+            st.caption("⭐ marks the chart types recommended for your current variable selection. Each card shows a live preview.")
+            
+            recommended = recommend_components(df, eda_vars)
+            preview_df = df[eda_vars]
+            
+            chart_names = list(CHART_INFO.keys())
+            eda_options = []
+            gallery_cols = st.columns(3)
+            for idx, name in enumerate(chart_names):
+                info = CHART_INFO[name]
+                is_recommended = recommended.get(name, False)
+                with gallery_cols[idx % 3]:
+                    with st.container(border=True):
+                        badge = " ⭐" if is_recommended else ""
+                        st.markdown(f"**{info['icon']} {name}{badge}**")
+                        st.caption(info['desc'])
+                        if name == "Summary Statistics":
+                            st.caption("📋 Table view — no chart preview")
+                        else:
+                            preview_fig = build_preview(name, preview_df, chart_settings)
+                            if preview_fig is not None:
+                                st.plotly_chart(
+                                    preview_fig, use_container_width=True,
+                                    config={"staticPlot": True, "displayModeBar": False},
+                                    key=f"preview_{name}"
+                                )
+                            else:
+                                st.caption("Not enough matching variables selected")
+                        include = st.checkbox("Include", value=is_recommended, key=f"include_{name}")
+                        if include:
+                            eda_options.append(name)
             
             if st.button("🚀 Generate Analysis", type="primary"):
                 if eda_options:
