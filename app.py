@@ -381,7 +381,10 @@ elif st.session_state.page == "validate":
         with tab4:
             if validation_result['issues']:
                 for issue in validation_result['issues']:
-                    st.error(issue)
+                    if issue.startswith('❌'):
+                        st.error(issue)
+                    else:
+                        st.warning(issue)
             else:
                 st.success("✅ No data format issues detected!")
         
@@ -391,19 +394,19 @@ elif st.session_state.page == "validate":
         col1, col2 = st.columns(2)
         
         with col1:
-            dependent_vars = st.multiselect(
-                "Select Dependent Variables (Target/Response):",
+            independent_vars = st.multiselect(
+                "Select Independent Variables (Features/Predictors):",
                 options=df.columns,
-                key="dependent_vars",
-                help="Variables you want to predict or analyze"
+                key="independent_vars",
+                help="Variables you'll use to predict or explain"
             )
         
         with col2:
-            independent_vars = st.multiselect(
-                "Select Independent Variables (Features/Predictors):",
-                options=[col for col in df.columns if col not in dependent_vars],
-                key="independent_vars",
-                help="Variables you'll use to predict or explain"
+            dependent_vars = st.multiselect(
+                "Select Dependent Variables (Target/Response):",
+                options=[col for col in df.columns if col not in independent_vars],
+                key="dependent_vars",
+                help="Variables you want to predict or analyze"
             )
         
         if dependent_vars and independent_vars:
@@ -429,20 +432,20 @@ elif st.session_state.page == "eda":
         st.markdown("### Select Variables to Analyze")
         col1, col2 = st.columns(2)
         with col1:
-            eda_dependent = st.multiselect(
-                "Dependent Variables (Target/Response):",
-                options=df.columns,
-                default=[v for v in st.session_state.get('dependent_vars', []) if v in df.columns],
-                key="eda_dependent_vars",
-                help="Variables you want to predict or analyze"
-            )
-        with col2:
             eda_independent = st.multiselect(
                 "Independent Variables (Features/Predictors):",
-                options=[c for c in df.columns if c not in eda_dependent],
-                default=[v for v in st.session_state.get('independent_vars', []) if v in df.columns and v not in eda_dependent],
+                options=df.columns,
+                default=[v for v in st.session_state.get('independent_vars', []) if v in df.columns],
                 key="eda_independent_vars",
                 help="Variables you'll use to predict or explain"
+            )
+        with col2:
+            eda_dependent = st.multiselect(
+                "Dependent Variables (Target/Response):",
+                options=[c for c in df.columns if c not in eda_independent],
+                default=[v for v in st.session_state.get('dependent_vars', []) if v in df.columns and v not in eda_independent],
+                key="eda_dependent_vars",
+                help="Variables you want to predict or analyze"
             )
         
         eda_vars = eda_dependent + [v for v in eda_independent if v not in eda_dependent]
