@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -82,8 +83,22 @@ def _settings(chart_settings):
     return merged
 
 
+def _to_hex(color: str) -> str:
+    """Convert a Plotly rgb()/rgba() color string to hex; st.color_picker only accepts hex."""
+    if color.startswith('#'):
+        return color
+    match = re.match(r'rgba?\((\d+),\s*(\d+),\s*(\d+)', color)
+    if match:
+        r, g, b = (int(v) for v in match.groups())
+        return f'#{r:02X}{g:02X}{b:02X}'
+    return color
+
+
 def _palette(settings):
-    return getattr(px.colors.qualitative, settings["palette"], px.colors.qualitative.Plotly)
+    # Some Plotly qualitative palettes (e.g. Pastel, Set2, Alphabet) use rgb() strings
+    # instead of hex, which crashes st.color_picker when used as a default value.
+    colors = getattr(px.colors.qualitative, settings["palette"], px.colors.qualitative.Plotly)
+    return [_to_hex(c) for c in colors]
 
 
 def _plot(fig, settings, title=None):
@@ -109,7 +124,8 @@ def _category_colors(categories: list, settings: dict, key_prefix: str) -> dict:
     for i, cat in enumerate(categories):
         default_color = palette[i % len(palette)]
         with cols[i % len(cols)]:
-            colors[cat] = st.color_picker(str(cat), default_color, key=f"{key_prefix}_color_{cat}")
+            colors[cat] = st.color_picker(str(cat), default_color,
+                                          key=f"{key_prefix}_{settings['palette']}_color_{cat}")
     return colors
 
 
@@ -306,7 +322,8 @@ def _histogram_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, ind
         with st.expander(f"🎨 Customize: {default_title}"):
             c1, c2 = st.columns([1, 2])
             with c1:
-                bar_color = st.color_picker("Bar color", palette[idx % len(palette)], key=f"dist_num_color_{col}")
+                bar_color = st.color_picker("Bar color", palette[idx % len(palette)],
+                                           key=f"dist_num_color_{settings['palette']}_{col}")
             with c2:
                 custom_title = st.text_input("Title", default_title, key=f"dist_num_title_{col}")
 
@@ -344,7 +361,8 @@ def _categorical_bar_chart(df: pd.DataFrame, settings: dict, dependent_vars: lis
         with st.expander(f"🎨 Customize: {default_title}"):
             c1, c2 = st.columns([1, 2])
             with c1:
-                bar_color = st.color_picker("Bar color", palette[idx % len(palette)], key=f"dist_cat_color_{col}")
+                bar_color = st.color_picker("Bar color", palette[idx % len(palette)],
+                                           key=f"dist_cat_color_{settings['palette']}_{col}")
             with c2:
                 custom_title = st.text_input("Title", default_title, key=f"dist_cat_title_{col}")
 
@@ -376,7 +394,7 @@ def _correlation_heatmap_chart(df: pd.DataFrame, settings: dict, dependent_vars:
             corr_colorscale = st.selectbox(
                 "Color scale", COLORSCALE_OPTIONS,
                 index=COLORSCALE_OPTIONS.index(settings["colorscale"]) if settings["colorscale"] in COLORSCALE_OPTIONS else 0,
-                key="corr_colorscale"
+                key=f"corr_colorscale_{settings['colorscale']}"
             )
         with c2:
             show_values = st.checkbox("Show values", value=True, key="corr_show_values")
@@ -526,7 +544,7 @@ def _scatter_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, indep
             category_colors = _category_colors(categories, settings, key_prefix="scatter")
             color_kwargs = {"color_discrete_map": category_colors}
         else:
-            marker_color = st.color_picker("Marker color", palette[0], key="scatter_color")
+            marker_color = st.color_picker("Marker color", palette[0], key=f"scatter_color_{settings['palette']}")
             color_kwargs = {"color_discrete_sequence": [marker_color]}
 
     fig = px.scatter(df, x=x_var, y=y_var, color=color_by, opacity=opacity, **color_kwargs)
@@ -583,7 +601,7 @@ def _bubble_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, indepe
             category_colors = _category_colors(categories, settings, key_prefix="bubble")
             color_kwargs = {"color_discrete_map": category_colors}
         else:
-            bubble_color = st.color_picker("Bubble color", palette[0], key="bubble_color")
+            bubble_color = st.color_picker("Bubble color", palette[0], key=f"bubble_color_{settings['palette']}")
             color_kwargs = {"color_discrete_sequence": [bubble_color]}
 
     plot_df = df.assign(_bubble_size=df[size_var].abs())
@@ -624,7 +642,7 @@ def _contour_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, indep
         contour_colorscale = st.selectbox(
             "Color scale", COLORSCALE_OPTIONS,
             index=COLORSCALE_OPTIONS.index(settings["colorscale"]) if settings["colorscale"] in COLORSCALE_OPTIONS else 0,
-            key="contour_colorscale"
+            key=f"contour_colorscale_{settings['colorscale']}"
         )
 
     fig = px.density_contour(df, x=x_var, y=y_var)
@@ -687,7 +705,7 @@ def _bar_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, independe
     else:
         with st.expander(f"🎨 Customize: {default_title}"):
             bar_title = st.text_input("Title", default_title, key="bar_title")
-            bar_color = st.color_picker("Bar color", palette[0], key="bar_color")
+            bar_color = st.color_picker("Bar color", palette[0], key=f"bar_color_{settings['palette']}")
         fig = px.bar(agg, x=cat_var, y=num_vars[0], color_discrete_sequence=[bar_color])
 
     fig.update_xaxes(title=cat_var)
@@ -891,7 +909,7 @@ def _time_series_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, i
             series_colors = _category_colors(categories, settings, key_prefix=kind)
             color_kwargs = {"color_discrete_map": series_colors}
         else:
-            single_color = st.color_picker("Line color", palette[0], key=f"{kind}_single_color")
+            single_color = st.color_picker("Line color", palette[0], key=f"{kind}_single_color_{settings['palette']}")
             color_kwargs = {"color_discrete_sequence": [single_color]}
 
     if kind == "line":

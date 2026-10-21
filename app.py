@@ -180,6 +180,8 @@ st.markdown("""
 # Initialize session state
 if 'df' not in st.session_state:
     st.session_state.df = None
+if 'uploaded_filename' not in st.session_state:
+    st.session_state.uploaded_filename = None
 if 'validation_report' not in st.session_state:
     st.session_state.validation_report = None
 if 'page' not in st.session_state:
@@ -195,7 +197,8 @@ with st.sidebar:
     st.markdown("## 📊 Navigation")
 
     if st.session_state.df is not None:
-        st.success(f"✅ {st.session_state.df.shape[0]} rows × {st.session_state.df.shape[1]} cols")
+        filename_prefix = f"{st.session_state.uploaded_filename} — " if st.session_state.uploaded_filename else ""
+        st.success(f"✅ {filename_prefix}{st.session_state.df.shape[0]} rows × {st.session_state.df.shape[1]} cols")
     else:
         st.caption("No data loaded yet")
 
@@ -204,7 +207,6 @@ with st.sidebar:
         if st.button(label, key=f"nav_{page_name}", width="stretch",
                     type="primary" if is_active else "secondary"):
             set_page(page_name)
-            st.rerun()
 
     def nav_section(title):
         st.markdown(f'<p class="nav-section-label">{title}</p>', unsafe_allow_html=True)
@@ -213,6 +215,7 @@ with st.sidebar:
 
     nav_section("Prepare")
     nav_button("upload", "Upload data")
+    nav_button("rename", "Rename variables")
     nav_button("validate", "Check data quality")
 
     nav_section("Analyze")
@@ -224,7 +227,6 @@ with st.sidebar:
                         type="primary" if is_active_category else "secondary"):
                 st.session_state.eda_category = category
                 set_page("eda")
-                st.rerun()
     nav_button("hypothesis", "Test hypotheses")
     nav_button("sensory", "Sensory analysis")
 
@@ -271,6 +273,9 @@ if st.session_state.page == "upload":
     st.markdown("## 📤 Upload Your Data")
     st.markdown("Choose an Excel or CSV file with your data")
     
+    if st.session_state.uploaded_filename:
+        st.caption(f"📄 Currently loaded file: **{st.session_state.uploaded_filename}**")
+    
     col1, col2 = st.columns([2, 1])
     with col1:
         uploaded_file = st.file_uploader(
@@ -287,6 +292,7 @@ if st.session_state.page == "upload":
                 df = pd.read_excel(uploaded_file)
             
             st.session_state.df = df
+            st.session_state.uploaded_filename = uploaded_file.name
             st.success(f"✅ Successfully loaded: {uploaded_file.name}")
             
             # Display basic info
@@ -302,11 +308,10 @@ if st.session_state.page == "upload":
             st.markdown("### Preview of Your Data")
             st.dataframe(df.head(10), use_container_width=True)
             
-            st.info("✨ Great! Your data is uploaded. Next step: Check data quality →")
+            st.info("✨ Great! Your data is uploaded. Next step: Rename variables (optional) →")
             
-            if st.button("➡️ Check Data Quality", type="primary"):
-                set_page("validate")
-                st.rerun()
+            if st.button("✏️ Rename Variables", type="primary"):
+                set_page("rename")
             
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
@@ -333,13 +338,59 @@ if st.session_state.page == "upload":
             """)
 
 
+# PAGE 1b: Rename Variables
+elif st.session_state.page == "rename":
+    if st.session_state.df is None:
+        st.warning("⚠️ Please upload data first!")
+        if st.button("Upload Data"):
+            set_page("upload")
+    else:
+        st.markdown("## ✏️ Rename Variables")
+        st.markdown("Give your columns clearer names — accents, special characters, and any language script are supported")
+        
+        df = st.session_state.df
+        
+        st.caption("Type any characters, accents, or language script — e.g. 'Température', '甜み', 'Préférence (n=50)'.")
+        rename_table = pd.DataFrame({"Current Name": df.columns, "New Name": df.columns})
+        edited_names = st.data_editor(
+            rename_table,
+            column_config={
+                "Current Name": st.column_config.TextColumn(disabled=True),
+                "New Name": st.column_config.TextColumn(),
+            },
+            hide_index=True,
+            width="stretch",
+            key="rename_editor"
+        )
+        
+        if st.button("✅ Apply Renaming", type="primary"):
+            new_names = [str(n).strip() for n in edited_names["New Name"]]
+            if any(not n for n in new_names):
+                st.error("❌ Column names cannot be empty.")
+            elif len(set(new_names)) != len(new_names):
+                st.error("❌ Column names must be unique.")
+            else:
+                rename_map = {old: new for old, new in zip(df.columns, new_names) if old != new}
+                if rename_map:
+                    df = df.rename(columns=rename_map)
+                    st.session_state.df = df
+                    for state_key in ("dependent_vars", "independent_vars", "eda_dependent_vars", "eda_independent_vars"):
+                        if state_key in st.session_state:
+                            st.session_state[state_key] = [rename_map.get(v, v) for v in st.session_state[state_key]]
+                    st.success(f"✅ Renamed {len(rename_map)} column(s)! The new names are used everywhere in the dashboard.")
+                else:
+                    st.info("No changes to apply.")
+        
+        if st.button("➡️ Check Data Quality"):
+            set_page("validate")
+
+
 # PAGE 2: Data Validation
 elif st.session_state.page == "validate":
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
-            st.rerun()
     else:
         st.markdown("## ✅ Check Data Quality")
         st.markdown("Making sure your data is ready for analysis")
@@ -423,7 +474,6 @@ elif st.session_state.page == "validate":
             st.success("✅ Variable roles configured!")
             if st.button("🤖 Go to Build Predictions"):
                 set_page("ml")
-                st.rerun()
 
 
 # PAGE 3: EDA
@@ -432,7 +482,6 @@ elif st.session_state.page == "eda":
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
-            st.rerun()
     else:
         st.markdown("## 🔍 Explore Your Data")
         st.markdown("Visualize patterns and relationships in your data")
@@ -533,6 +582,11 @@ elif st.session_state.page == "eda":
                             eda_options.append(name)
             
             if st.button("🚀 Generate Analysis", type="primary"):
+                st.session_state.eda_generated = True
+            
+            # Keep rendering on every rerun (e.g. when a customize color picker changes)
+            # instead of only on the exact run the button was clicked.
+            if st.session_state.get("eda_generated"):
                 if eda_options:
                     run_eda(df, eda_options, eda_vars, eda_dependent, eda_independent, chart_settings)
                 else:
@@ -545,7 +599,6 @@ elif st.session_state.page == "hypothesis":
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
-            st.rerun()
     else:
         st.markdown("## 📊 Test Your Hypotheses")
         st.markdown("Answer statistical questions about your data")
@@ -560,7 +613,6 @@ elif st.session_state.page == "sensory":
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
-            st.rerun()
     else:
         st.markdown("## 👃 Sensory Analysis")
         st.markdown("Consumer preferences and sensory evaluation")
@@ -575,7 +627,6 @@ elif st.session_state.page == "ml":
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
-            st.rerun()
     else:
         st.markdown("## 🤖 Build Predictions")
         st.markdown("Train machine learning models to predict outcomes")
@@ -584,7 +635,6 @@ elif st.session_state.page == "ml":
             st.warning("⚠️ Please go to 'Check Data Quality' and specify your target and predictor variables first!")
             if st.button("Go to Check Data Quality"):
                 set_page("validate")
-                st.rerun()
         else:
             df = st.session_state.df
             run_ml_pipeline(
@@ -603,7 +653,6 @@ elif st.session_state.page == "recommend":
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
-            st.rerun()
     else:
         df = st.session_state.df
         
