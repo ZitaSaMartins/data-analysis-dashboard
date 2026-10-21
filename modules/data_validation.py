@@ -19,9 +19,7 @@ def validate_dataset(df: pd.DataFrame) -> Dict:
         validation_issues.append(f"❌ Duplicate column names found: {df.columns[df.columns.duplicated()].tolist()}")
     
     # Check 3: Invalid characters in column names
-    # Parentheses are excluded since unit suffixes like "Height (cm)" are common
-    # and don't break anything in this app (no formulas/query/eval on column names).
-    invalid_chars = [col for col in df.columns if any(char in col for char in ['!', '@', '#', '$', '%', '^', '&', '*'])]
+    invalid_chars = [col for col in df.columns if any(char in col for char in ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'])]
     if invalid_chars:
         validation_issues.append(f"⚠️ Column names with special characters: {invalid_chars}")
     
