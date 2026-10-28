@@ -61,9 +61,8 @@ def _compact_letters(
             cliques.append(current)
             return
         remaining = set(candidates)
-        for label in sorted(candidates):
-            if label not in remaining:
-                continue
+        pivot = max(candidates | excluded, key=lambda label: len(candidates & compatible[label]))
+        for label in candidates - compatible[pivot]:
             find(
                 current | {label},
                 remaining & compatible[label],

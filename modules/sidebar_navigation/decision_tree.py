@@ -135,7 +135,7 @@ def show_test_decision_tree() -> None:
             nonparametric,
             "🟧 Kruskal-Wallis",
             "Compares three or more separate groups using ranks.",
-            "nonparametric_kruskal",
+            "nonparametric_kruskal_wallis",
             "decision_kruskal",
         )
     else:

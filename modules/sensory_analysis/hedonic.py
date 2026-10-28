@@ -33,6 +33,7 @@ def _hedonic(df: pd.DataFrame) -> None:
     summary = clean.groupby(product, observed=True)[liking].agg(["mean", "std", "median", "count"])
     pairwise_rows: list[dict[str, object]] = []
     significant_pairs: set[tuple[str, str]] = set()
+    tested_products: set[str] = set()
     if consumer.startswith("("):
         grouped = {
             str(name): group[liking].to_numpy()
@@ -41,6 +42,7 @@ def _hedonic(df: pd.DataFrame) -> None:
         }
         if not _need(len(grouped) >= 2, "Need at least two products with two liking scores each."):
             return
+        tested_products = set(grouped)
         statistic, p_value = stats.f_oneway(*grouped.values())
         method = "One-way ANOVA"
         values = np.concatenate(list(grouped.values()))
@@ -69,6 +71,7 @@ def _hedonic(df: pd.DataFrame) -> None:
             return
         statistic, p_value = stats.friedmanchisquare(*(paired[c] for c in paired))
         method = "Friedman"
+        tested_products = {str(column) for column in paired.columns}
         metadata: list[tuple[str, str, float]] = []
         raw_p_values: list[float] = []
         for first_index, first in enumerate(paired.columns):
@@ -94,8 +97,11 @@ def _hedonic(df: pd.DataFrame) -> None:
         posthoc_method = "Holm-adjusted Wilcoxon"
     st.write(f"{method}: statistic = **{statistic:.3f}**, p = **{p_value:.4g}**")
     _interpret_p(float(p_value))
-    letters = _compact_letters([str(value) for value in summary.index], significant_pairs)
-    summary["Grouping letters"] = [letters[str(value)] for value in summary.index]
+    letters = _compact_letters(sorted(tested_products), significant_pairs)
+    summary["Grouping letters"] = [
+        letters[str(value)] if str(value) in tested_products else "Untested"
+        for value in summary.index
+    ]
     st.dataframe(summary, width="stretch")
     st.subheader(f"Pairwise comparisons: {posthoc_method}")
     st.dataframe(pd.DataFrame(pairwise_rows), width="stretch")
@@ -129,7 +135,11 @@ def _segmentation(df: pd.DataFrame) -> None:
         return
     matrix, _, _, _ = result
     maximum = min(8, matrix.shape[0] - 1)
-    clusters = st.slider("Number of segments", 2, maximum, min(3, maximum), key="segment_k")
+    if maximum <= 2:
+        clusters = 2
+        st.caption("Using 2 segments (the maximum supported by this many complete consumers).")
+    else:
+        clusters = st.slider("Number of segments", 2, maximum, min(3, maximum), key="segment_k")
     scaled = StandardScaler().fit_transform(matrix)
     model = KMeans(n_clusters=clusters, n_init=20, random_state=42).fit(scaled)
     assignments = pd.DataFrame({"Segment": model.labels_ + 1}, index=matrix.index)

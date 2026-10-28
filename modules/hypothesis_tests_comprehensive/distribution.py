@@ -195,6 +195,7 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
         type="primary",
         key="run_comprehensive_distribution",
     ):
+        st.session_state.distribution_test_result = None
         results: list[dict[str, object]] = []
         saved_results: list[dict[str, object]] = []
         plotted_values: dict[str, pd.Series] = {}

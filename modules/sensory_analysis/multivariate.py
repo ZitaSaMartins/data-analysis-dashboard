@@ -7,6 +7,7 @@ from collections.abc import Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sklearn
 import streamlit as st
 from scipy import linalg
 from scipy.cluster.hierarchy import dendrogram, fcluster, linkage
@@ -76,7 +77,7 @@ def _gpa(df: pd.DataFrame) -> None:
         values -= values.mean(axis=0)
         norm = np.linalg.norm(values)
         tables.append(values / norm if norm else values)
-    consensus = np.mean(tables, axis=0)
+    consensus = tables[0]
     for _ in range(30):
         aligned = [table @ linalg.orthogonal_procrustes(table, consensus)[0] for table in tables]
         updated = np.mean(aligned, axis=0)
@@ -114,8 +115,11 @@ def _statis(df: pd.DataFrame) -> None:
     eigenvalues, eigenvectors = np.linalg.eigh(rv)
     weights = np.abs(eigenvectors[:, -1])
     weights /= weights.sum()
-    compromise = sum(weight * table for weight, table in zip(weights, tables))
-    coordinates = PCA(n_components=2).fit_transform(compromise)
+    compromise = sum(weight * cross_product for weight, cross_product in zip(weights, cross_products))
+    compromise_eigenvalues, compromise_eigenvectors = np.linalg.eigh(compromise)
+    order = np.argsort(compromise_eigenvalues)[::-1][:2]
+    scale = np.sqrt(np.clip(compromise_eigenvalues[order], 0, None))
+    coordinates = compromise_eigenvectors[:, order] * scale
     _scatter_labels(coordinates, common, "STATIS compromise")
     st.dataframe(pd.DataFrame(rv, index=[str(x[0]) for x in grouped], columns=[str(x[0]) for x in grouped]),
                  width="stretch")
@@ -163,6 +167,8 @@ def _mfa(df: pd.DataFrame) -> None:
     if not _need(len(blocks) >= 2, "Column names must identify at least two blocks (for example taste_sweet, aroma_fruity)."):
         return
     clean = df[features].dropna()
+    if not _need(clean.shape[0] >= 2, "Need at least two complete rows across the selected blocks."):
+        return
     pieces: list[np.ndarray] = []
     for columns in blocks.values():
         values = StandardScaler().fit_transform(clean[columns])
@@ -186,17 +192,23 @@ def _pls_coefficient_frame(
 ) -> pd.DataFrame:
     """Return PLS coefficients as predictors × responses across sklearn versions."""
     values = np.asarray(model.coef_)
-    expected_shape = (len(predictors), len(responses))
-    transposed_shape = (len(responses), len(predictors))
-    if values.shape == expected_shape:
-        oriented = values
-    elif values.shape == transposed_shape:
-        oriented = values.T
-    else:
+    # scikit-learn >= 1.1 returns coef_ shaped (n_targets, n_features); earlier
+    # versions returned (n_features, n_targets). Decide orientation from the
+    # installed version instead of guessing from the (possibly square) shape,
+    # since a square coefficient matrix cannot be oriented by shape alone.
+    version = tuple(int(part) for part in sklearn.__version__.split(".")[:2])
+    targets_by_features = version >= (1, 1)
+    expected_shape = (
+        (len(responses), len(predictors))
+        if targets_by_features
+        else (len(predictors), len(responses))
+    )
+    if values.shape != expected_shape:
         raise ValueError(
-            "Unexpected PLS coefficient shape "
-            f"{values.shape}; expected {expected_shape} or {transposed_shape}."
+            f"Unexpected PLS coefficient shape {values.shape}; expected {expected_shape} "
+            f"for scikit-learn {sklearn.__version__}."
         )
+    oriented = values.T if targets_by_features else values
     return pd.DataFrame(oriented, index=predictors, columns=responses)
 
 
@@ -213,7 +225,11 @@ def _pls(df: pd.DataFrame) -> None:
     maximum = min(len(predictors), max(1, len(clean) - 1))
     if not _need(bool(responses) and bool(predictors) and len(clean) >= 3, "Select X and Y with 3 complete rows."):
         return
-    components = st.slider("Components", 1, maximum, min(2, maximum), key="pls_components")
+    if maximum <= 1:
+        components = 1
+        st.caption("Using 1 component (the maximum supported by the selected predictors/rows).")
+    else:
+        components = st.slider("Components", 1, maximum, min(2, maximum), key="pls_components")
     model = PLSRegression(n_components=components, scale=True).fit(clean[predictors], clean[responses])
     predicted = model.predict(clean[predictors])
     rows = []

@@ -10,6 +10,25 @@ from scipy import stats
 from ._shared import ALPHA, _require_categorical, _require_numeric, _select_assumption_variables
 
 
+def _groups_are_normal(samples: list[pd.Series]) -> bool | None:
+    """Check whether every supplied group is individually consistent with normality.
+
+    Bartlett's assumption is normality within each compared group, not in the
+    pooled outcome, so this tests the same per-group samples used for the
+    variance test rather than relying on the earlier pooled distribution check.
+    Returns ``None`` when at least one group cannot be tested.
+    """
+    for sample in samples:
+        values = sample.dropna().astype(float)
+        if len(values) < 3 or values.std(ddof=1) == 0:
+            return None
+        test = stats.shapiro if len(values) < 50 else stats.normaltest
+        _, p_value = test(values)
+        if p_value <= ALPHA:
+            return False
+    return True
+
+
 def _suggest_variance_test(
     variable: str,
     samples: list[pd.Series],
@@ -17,11 +36,7 @@ def _suggest_variance_test(
     if len(samples) < 2:
         return "Unavailable", "At least two groups with two observations are required."
 
-    distribution_results = st.session_state.get("distribution_test_result")
-    normality_by_variable = {
-        result["variable"]: bool(result["is_normal"])
-        for result in (distribution_results or {}).get("variables", [])
-    }
+    groups_normal = _groups_are_normal(samples)
     minimum_group_size = min(len(sample) for sample in samples)
     has_extreme_outliers = False
     for sample in samples:
@@ -35,15 +50,15 @@ def _suggest_variance_test(
             has_extreme_outliers = True
             break
 
-    if normality_by_variable.get(variable) is False or has_extreme_outliers:
+    if groups_normal is False or has_extreme_outliers:
         return (
             "Fligner-Killeen",
             "Non-normality or extreme outliers were detected; use the most robust option.",
         )
-    if normality_by_variable.get(variable) is True and minimum_group_size >= 5:
+    if groups_normal is True and minimum_group_size >= 5:
         return (
             "Bartlett",
-            "The distribution check supports normality and every group has at least five observations.",
+            "Each group is individually consistent with normality and has at least five observations.",
         )
     if minimum_group_size < 5:
         return (
@@ -217,10 +232,11 @@ def run_variance_tests(df: pd.DataFrame) -> None:
               approximately normal. It is sensitive to non-normality and outliers.
             - **Fligner-Killeen:** a rank-based, highly robust option for clearly
               non-normal data or influential outliers.
-            - **Automatic:** uses prior results from **Test Distribution**, group
-              sizes, and extreme-outlier checks. It chooses Bartlett when normality
-              is supported, Fligner-Killeen when non-normality or extreme outliers
-              are detected, and Levene when assumptions remain uncertain.
+            - **Automatic:** checks normality within each group and for extreme
+              outliers. It chooses Bartlett when every group is individually
+              consistent with normality, Fligner-Killeen when non-normality or
+              extreme outliers are detected, and Levene when assumptions remain
+              uncertain.
 
             A non-significant result does not prove identical variances. Review the
             grouped box plot, violin plot, and variance bars for practically important
@@ -233,6 +249,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
         type="primary",
         key="run_comprehensive_variance",
     ):
+        st.session_state.variance_test_result = None
         results: list[dict[str, object]] = []
         saved_results: list[dict[str, object]] = []
         group_summaries: list[dict[str, object]] = []

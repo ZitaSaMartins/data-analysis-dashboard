@@ -20,12 +20,14 @@ def _cata(df: pd.DataFrame) -> None:
     st.write("Attribute frequencies describe products; Cochran's Q tests paired product differences.")
     numeric, _ = _columns(df)
     columns = df.columns.astype(str).tolist()
-    if not _need(bool(numeric) and len(columns) >= 3, "Need consumer, product, and binary attribute columns."):
+    boolean_columns = df.select_dtypes(include="bool").columns.astype(str).tolist()
+    binary_eligible = [c for c in columns if c in numeric or c in boolean_columns]
+    if not _need(bool(binary_eligible) and len(columns) >= 3, "Need consumer, product, and binary attribute columns."):
         return
     consumer = st.selectbox("Consumer", columns, key="cata_consumer")
     product = st.selectbox("Product", [c for c in columns if c != consumer], key="cata_product")
     candidates = [
-        c for c in numeric if c not in {consumer, product}
+        c for c in binary_eligible if c not in {consumer, product}
         and set(df[c].dropna().unique()).issubset({0, 1, False, True})
     ]
     attributes = st.multiselect("Binary CATA attributes", candidates, default=candidates[:8], key="cata_attr")
@@ -188,7 +190,7 @@ def _jar(df: pd.DataFrame) -> None:
         )
     fig, ax = plt.subplots(figsize=(9, 5))
     sns.scatterplot(data=result, x="Consumers (%)", y="Mean drop", hue="Attribute", style="Direction", s=90, ax=ax)
-    ax.axvline(20, color="grey", linestyle="--")
+    ax.axvline(minimum_consumers, color="grey", linestyle="--")
     ax.set(title="JAR penalty plot")
     st.pyplot(fig)
     plt.close(fig)

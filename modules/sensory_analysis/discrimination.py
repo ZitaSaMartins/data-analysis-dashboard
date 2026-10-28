@@ -9,7 +9,7 @@ import streamlit as st
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
-from ._shared import _compact_letters, _interpret_p, _need
+from ._shared import _columns, _compact_letters, _interpret_p, _need
 
 
 def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> None:
@@ -22,9 +22,18 @@ def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> Non
         return
     outcome = st.selectbox("Response / correct column", df.columns.tolist(), key=f"{key}_outcome")
     values = df[outcome].dropna().unique().tolist()
-    if not _need(len(values) >= 2, "The response column must contain correct and incorrect outcomes."):
+    if not _need(len(values) >= 1, "The response column must contain at least one observed outcome."):
         return
-    correct_value = st.selectbox("Value meaning correct", values, key=f"{key}_correct")
+    if len(values) == 1:
+        marks_correct = st.radio(
+            f"Does the value '{values[0]}' represent a correct response?",
+            ["Yes", "No"],
+            key=f"{key}_single_outcome",
+            horizontal=True,
+        )
+        correct_value = values[0] if marks_correct == "Yes" else object()
+    else:
+        correct_value = st.selectbox("Value meaning correct", values, key=f"{key}_correct")
     valid = df[outcome].notna()
     successes = int((df.loc[valid, outcome] == correct_value).sum())
     total = int(valid.sum())
