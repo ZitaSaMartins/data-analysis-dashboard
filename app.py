@@ -2,13 +2,39 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from io import StringIO
+import hashlib
 import sys
 
 # Import custom modules
 from modules.data_validation import validate_dataset, generate_validation_report
 from modules.eda import run_eda, recommend_components, build_preview, CHART_INFO, CHART_CATALOG
-from modules.hypothesis_tests import run_hypothesis_tests
-from modules.sensory_analysis import run_sensory_analysis
+from modules.sidebar_navigation import (
+    build_main_navigation,
+    show_sidebar_status,
+    show_test_decision_tree,
+)
+from modules.hypothesis_tests_comprehensive import (
+    run_distribution_tests,
+    run_variance_tests,
+    show_suggested_analysis,
+    test_one_sample_ttest,
+    test_independent_ttest,
+    test_paired_ttest,
+    test_anova,
+    test_two_way_anova,
+    test_repeated_anova,
+    test_pearson_correlation,
+    test_linear_regression,
+    test_mannwhitney,
+    test_wilcoxon,
+    test_kruskal_wallis,
+    test_friedman,
+    test_spearman,
+    test_kendall,
+    test_mood_median,
+    test_chi_square,
+)
+from modules.sensory_analysis import run_sensory_page
 from modules.ml_models import run_ml_pipeline
 from modules.model_recommender import recommend_models
 
@@ -134,19 +160,36 @@ st.markdown("""
         letter-spacing: 0.08em;
         margin: 1.25rem 0 0.25rem 0.25rem;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button {
         position: relative;
         width: 100%;
         text-align: left;
+        justify-content: flex-start;
         background-color: transparent;
         color: #C7DCE5;
         border: none;
         border-left: 3px solid transparent;
         border-radius: 0;
-        padding: 0.55rem 1.6rem 0.55rem 0.9rem;
+        padding: 0.55rem 1.6rem 0.55rem 1.15rem;
         font-weight: 500;
         font-size: 0.92rem;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button p {
+        width: 100%;
+        margin: 0;
+        text-align: left;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button [data-testid="stMarkdownContainer"] {
+        width: 100%;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button > div,
+    section[data-testid="stSidebar"] .stButton > button > div > span {
+        width: 100%;
+        justify-content: flex-start;
     }
     
     section[data-testid="stSidebar"] .stButton > button::after {
@@ -177,6 +220,63 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+EDA_PAGE_CATEGORIES = {
+    "eda_distributions": "Distribution",
+    "eda_correlations": "Correlation",
+    "eda_comparisons": "Comparison",
+    "eda_hierarchical": "Part-to-Whole & Hierarchical",
+    "eda_temporal": "Temporal",
+}
+
+TEST_PAGE_HANDLERS = {
+    "test_distribution": run_distribution_tests,
+    "test_variance": run_variance_tests,
+    "suggested_analysis": show_suggested_analysis,
+    "parametric_ttest_one_sample": test_one_sample_ttest,
+    "parametric_ttest_independent": test_independent_ttest,
+    "parametric_ttest_paired": test_paired_ttest,
+    "parametric_anova": test_anova,
+    "parametric_twoway_anova": test_two_way_anova,
+    "parametric_repeated_anova": test_repeated_anova,
+    "correlation_pearson": test_pearson_correlation,
+    "regression": test_linear_regression,
+    "nonparametric_mannwhitney": test_mannwhitney,
+    "nonparametric_wilcoxon": test_wilcoxon,
+    "nonparametric_kruskal_wallis": test_kruskal_wallis,
+    "nonparametric_friedman": test_friedman,
+    "correlation_spearman": test_spearman,
+    "correlation_kendall": test_kendall,
+    "nonparametric_mood_median": test_mood_median,
+    "chi_square": test_chi_square,
+}
+
+SENSORY_PAGES = {
+    "sensory_triangle",
+    "sensory_paired",
+    "sensory_duo_trio",
+    "sensory_tetrad",
+    "sensory_ranking",
+    "sensory_qda",
+    "sensory_temporal",
+    "sensory_panel_discrimination",
+    "sensory_panel_repeatability",
+    "sensory_panel_agreement",
+    "sensory_panel_scale",
+    "sensory_product_characterization",
+    "sensory_cata",
+    "sensory_jar",
+    "sensory_hedonic",
+    "sensory_segmentation",
+    "sensory_internal_preference",
+    "sensory_external_preference",
+    "sensory_pca",
+    "sensory_gpa",
+    "sensory_statis",
+    "sensory_hac",
+    "sensory_mfa",
+    "sensory_pls",
+}
+
 # Initialize session state
 if 'df' not in st.session_state:
     st.session_state.df = None
@@ -188,55 +288,50 @@ if 'page' not in st.session_state:
     st.session_state.page = "home"
 if 'eda_category' not in st.session_state:
     st.session_state.eda_category = list(CHART_CATALOG.keys())[0]
+if 'dataset_signature' not in st.session_state:
+    st.session_state.dataset_signature = None
+
+legacy_eda_pages = {
+    "Distribution": "eda_distributions",
+    "Correlation": "eda_correlations",
+    "Comparison": "eda_comparisons",
+    "Part-to-Whole & Hierarchical": "eda_hierarchical",
+    "Temporal": "eda_temporal",
+}
+legacy_page_map = {
+    "eda": legacy_eda_pages.get(st.session_state.eda_category, "eda_comparisons"),
+    "hypothesis": "test_distribution",
+    "sensory": "sensory_qda",
+    "sensory_descriptive": "sensory_qda",
+    "sensory_comparison": "sensory_product_characterization",
+    "ml": "machine_learning",
+    "recommend": "recommendations",
+    "help_data": "help_getting_started",
+    "help_analysis": "help_analysis_types",
+}
+if st.session_state.page in legacy_page_map:
+    st.session_state.page = legacy_page_map[st.session_state.page]
+
 
 def set_page(page_name):
     st.session_state.page = page_name
+    st.rerun()
 
-# Sidebar navigation - flat list with section labels and chevrons, always visible
-with st.sidebar:
-    st.markdown("## 📊 Navigation")
 
-    if st.session_state.df is not None:
-        filename_prefix = f"{st.session_state.uploaded_filename} — " if st.session_state.uploaded_filename else ""
-        st.success(f"✅ {filename_prefix}{st.session_state.df.shape[0]} rows × {st.session_state.df.shape[1]} cols")
-    else:
-        st.caption("No data loaded yet")
+def store_eda_independent_selection():
+    st.session_state.eda_independent_selection = list(
+        st.session_state.get("_eda_independent_vars", [])
+    )
 
-    def nav_button(page_name, label):
-        is_active = st.session_state.page == page_name
-        if st.button(label, key=f"nav_{page_name}", width="stretch",
-                    type="primary" if is_active else "secondary"):
-            set_page(page_name)
 
-    def nav_section(title):
-        st.markdown(f'<p class="nav-section-label">{title}</p>', unsafe_allow_html=True)
+def store_eda_dependent_selection():
+    st.session_state.eda_dependent_selection = list(
+        st.session_state.get("_eda_dependent_vars", [])
+    )
 
-    nav_button("home", "Home")
 
-    nav_section("Prepare")
-    nav_button("upload", "Upload data")
-    nav_button("rename", "Rename variables")
-    nav_button("validate", "Check data quality")
-
-    nav_section("Analyze")
-    is_eda_active = st.session_state.page == "eda"
-    with st.expander("Explore data", expanded=is_eda_active):
-        for category in CHART_CATALOG.keys():
-            is_active_category = is_eda_active and st.session_state.eda_category == category
-            if st.button(category, key=f"nav_eda_{category}", width="stretch",
-                        type="primary" if is_active_category else "secondary"):
-                st.session_state.eda_category = category
-                set_page("eda")
-    nav_button("hypothesis", "Test hypotheses")
-    nav_button("sensory", "Sensory analysis")
-
-    nav_section("Advanced analysis")
-    nav_button("ml", "Build predictions")
-    nav_button("recommend", "Get recommendations")
-
-    nav_section("Help")
-    nav_button("help_data", "Getting started")
-    nav_button("help_analysis", "Analysis types")
+build_main_navigation()
+show_sidebar_status()
 
 
 # HOME PAGE - Welcome & status
@@ -253,16 +348,19 @@ if st.session_state.page == "home":
     st.markdown("### 🗺️ How it works")
     st.markdown("""
     Use the **menu in the sidebar** to navigate between steps:
-    1. **Upload & Prepare** — Upload Data, then Check Data Quality
-    2. **Analyze** — Explore Data, Test Hypotheses, Sensory Analysis
-    3. **Advanced** — Build Predictions, Get Recommendations
+    1. **Upload & Prepare** — Upload Data, Check Data Quality, then Rename Variables
+    2. **Explore** — Choose a chart category to explore patterns and relationships
+    3. **Statistical Inference** — Check assumptions, review Suggested Analysis, then choose a test
+    4. **Sensory** — Open the independent Sensory Analysis module when needed
+    5. **Advanced** — Build Predictions, Get Recommendations
+    6. **Help** — Getting Started, Analysis Types, and How to Choose Tests guides
     """)
     
     # Footer
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #999; font-size: 0.9rem;'>
-        <p>📚 <b>Tip:</b> Follow the steps in order: Upload → Check → Analyze → Advanced</p>
+        <p>📚 <b>Tip:</b> Follow the steps in order: Upload → Check → Explore → Test → Advanced</p>
         <p>No coding knowledge needed • All analysis in your browser • Your data stays private</p>
     </div>
     """, unsafe_allow_html=True)
@@ -286,6 +384,13 @@ if st.session_state.page == "upload":
     
     if uploaded_file is not None:
         try:
+            dataset_signature = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+            dataset_changed = dataset_signature != st.session_state.dataset_signature
+            if dataset_changed:
+                st.session_state.distribution_test_result = None
+                st.session_state.variance_test_result = None
+                st.session_state.dataset_signature = dataset_signature
+
             if uploaded_file.name.endswith('.csv'):
                 df = pd.read_csv(uploaded_file)
             else:
@@ -293,6 +398,8 @@ if st.session_state.page == "upload":
             
             st.session_state.df = df
             st.session_state.uploaded_filename = uploaded_file.name
+            if dataset_changed:
+                st.rerun()
             st.success(f"✅ Successfully loaded: {uploaded_file.name}")
             
             # Display basic info
@@ -374,7 +481,18 @@ elif st.session_state.page == "rename":
                 if rename_map:
                     df = df.rename(columns=rename_map)
                     st.session_state.df = df
-                    for state_key in ("dependent_vars", "independent_vars", "eda_dependent_vars", "eda_independent_vars"):
+                    st.session_state.distribution_test_result = None
+                    st.session_state.variance_test_result = None
+                    st.session_state.dataset_signature = None
+                    for state_key in (
+                        "dependent_vars",
+                        "independent_vars",
+                        "eda_dependent_vars",
+                        "eda_independent_vars",
+                        "eda_dependent_selection",
+                        "eda_independent_selection",
+                        "assumption_variables",
+                    ):
                         if state_key in st.session_state:
                             st.session_state[state_key] = [rename_map.get(v, v) for v in st.session_state[state_key]]
                     st.success(f"✅ Renamed {len(rename_map)} column(s)! The new names are used everywhere in the dashboard.")
@@ -473,11 +591,12 @@ elif st.session_state.page == "validate":
         if dependent_vars and independent_vars:
             st.success("✅ Variable roles configured!")
             if st.button("🤖 Go to Build Predictions"):
-                set_page("ml")
+                set_page("machine_learning")
 
 
 # PAGE 3: EDA
-elif st.session_state.page == "eda":
+elif st.session_state.page in EDA_PAGE_CATEGORIES:
+    st.session_state.eda_category = EDA_PAGE_CATEGORIES[st.session_state.page]
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -489,21 +608,54 @@ elif st.session_state.page == "eda":
         df = st.session_state.df
         
         st.markdown("### Select Variables to Analyze")
+        if "eda_independent_selection" not in st.session_state:
+            st.session_state.eda_independent_selection = list(
+                st.session_state.get(
+                    "eda_independent_vars",
+                    st.session_state.get("independent_vars", []),
+                )
+            )
+        if "eda_dependent_selection" not in st.session_state:
+            st.session_state.eda_dependent_selection = list(
+                st.session_state.get(
+                    "eda_dependent_vars",
+                    st.session_state.get("dependent_vars", []),
+                )
+            )
+
+        selected_independent = [
+            variable
+            for variable in st.session_state.eda_independent_selection
+            if variable in df.columns
+        ]
+        selected_dependent = [
+            variable
+            for variable in st.session_state.eda_dependent_selection
+            if variable in df.columns and variable not in selected_independent
+        ]
+        st.session_state.eda_independent_selection = selected_independent
+        st.session_state.eda_dependent_selection = selected_dependent
+
+        # Widget keys can be removed during a navigation rerun; restore them
+        # from persistent, non-widget state before rendering each EDA page.
+        st.session_state._eda_independent_vars = selected_independent
+        st.session_state._eda_dependent_vars = selected_dependent
+
         col1, col2 = st.columns(2)
         with col1:
             eda_independent = st.multiselect(
                 "Independent Variables (Features/Predictors):",
                 options=df.columns,
-                default=[v for v in st.session_state.get('independent_vars', []) if v in df.columns],
-                key="eda_independent_vars",
+                key="_eda_independent_vars",
+                on_change=store_eda_independent_selection,
                 help="Variables you'll use to predict or explain"
             )
         with col2:
             eda_dependent = st.multiselect(
                 "Dependent Variables (Target/Response):",
                 options=[c for c in df.columns if c not in eda_independent],
-                default=[v for v in st.session_state.get('dependent_vars', []) if v in df.columns and v not in eda_independent],
-                key="eda_dependent_vars",
+                key="_eda_dependent_vars",
+                on_change=store_eda_dependent_selection,
                 help="Variables you want to predict or analyze"
             )
         
@@ -550,7 +702,7 @@ elif st.session_state.page == "eda":
             }
             
             st.markdown(f"### {st.session_state.eda_category}")
-            st.caption("⭐ marks the chart types recommended for your current variable selection. Each card shows a live preview. Switch categories from the \"Explore data\" menu in the sidebar.")
+            st.caption("⭐ marks the chart types recommended for your current variable selection. Each card shows a live preview. Switch categories directly under \"Explore\" in the sidebar.")
             
             show_summary = st.checkbox("📋 Also include Summary Statistics table", value=False, key="include_summary_stats")
             
@@ -593,22 +745,18 @@ elif st.session_state.page == "eda":
                     st.warning("Select at least one option")
 
 
-# PAGE 4: Hypothesis Testing
-elif st.session_state.page == "hypothesis":
+# PAGE 4: Statistical Tests
+elif st.session_state.page in TEST_PAGE_HANDLERS:
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
     else:
-        st.markdown("## 📊 Test Your Hypotheses")
-        st.markdown("Answer statistical questions about your data")
-        
-        df = st.session_state.df
-        run_hypothesis_tests(df)
+        TEST_PAGE_HANDLERS[st.session_state.page](st.session_state.df)
 
 
 # PAGE 5: Sensory Analysis
-elif st.session_state.page == "sensory":
+elif st.session_state.page in SENSORY_PAGES:
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -617,12 +765,11 @@ elif st.session_state.page == "sensory":
         st.markdown("## 👃 Sensory Analysis")
         st.markdown("Consumer preferences and sensory evaluation")
         
-        df = st.session_state.df
-        run_sensory_analysis(df)
+        run_sensory_page(st.session_state.df, st.session_state.page)
 
 
 # PAGE 6: Machine Learning
-elif st.session_state.page == "ml":
+elif st.session_state.page == "machine_learning":
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
@@ -645,7 +792,7 @@ elif st.session_state.page == "ml":
 
 
 # PAGE 7: Model Recommender
-elif st.session_state.page == "recommend":
+elif st.session_state.page == "recommendations":
     st.markdown("## 💡 Which Model Should I Use?")
     st.markdown("Get expert recommendations based on your data and question")
     
@@ -661,7 +808,7 @@ elif st.session_state.page == "recommend":
         with col1:
             analysis_type = st.selectbox(
                 "🎯 What are you trying to do?",
-                ["EDA (Explore data)", "Hypothesis Testing (Test differences)", 
+                ["EDA (Explore data)", "Statistical Inference (Test differences)",
                  "Classification (Predict categories)", "Regression (Predict numbers)", 
                  "Sensory Analysis (Consumer preferences)"],
                 format_func=lambda x: x.split("(")[0].strip() if "(" in x else x
@@ -682,7 +829,7 @@ elif st.session_state.page == "recommend":
             # Extract analysis type from the formatted string
             analysis_type_mapping = {
                 "EDA (Explore data)": "EDA",
-                "Hypothesis Testing (Test differences)": "Hypothesis Testing",
+                "Statistical Inference (Test differences)": "Hypothesis Testing",
                 "Classification (Predict categories)": "Classification",
                 "Regression (Predict numbers)": "Regression",
                 "Sensory Analysis (Consumer preferences)": "Sensory Analysis"
@@ -706,88 +853,171 @@ elif st.session_state.page == "recommend":
                     st.markdown(f"**🎯 Best for:**\n{rec['when_to_use']}")
 
 # HELP PAGES
-elif st.session_state.page == "help_data":
+elif st.session_state.page == "help_getting_started":
     st.markdown("## ❓ Help: Getting Started")
+    st.write(
+        "Follow this workflow from preparing your file through selecting and "
+        "interpreting an analysis."
+    )
     
     with st.expander("How do I prepare my data?", expanded=True):
         st.markdown("""
         Your data should be in a spreadsheet with:
         - **First row:** Column names/headers
-        - **Other rows:** Your actual data
+        - **Each row:** One observation, participant, sample, or measurement
+        - **Each column:** One variable
         
         Example:
         | Product | Taste | Texture | Liking |
         |---------|-------|---------|--------|
         | A | 7 | 8 | 7.5 |
         | B | 6 | 9 | 8 |
+
+        Use short, meaningful column names. You can change them later with
+        **Prepare Data → Rename Variables**.
         """)
     
-    with st.expander("What file formats work?"):
+    with st.expander("How do I upload and confirm my dataset?"):
         st.markdown("""
-        ✅ **Excel:** .xlsx, .xls
-        ✅ **Spreadsheet:** .csv
-        ❌ **Google Sheets:** Export as CSV first
-        ❌ **PDF:** Not supported
+        1. Open **Prepare Data → Upload Data**.
+        2. Select an Excel (`.xlsx`, `.xls`) or CSV (`.csv`) file.
+        3. Review the preview, row count, column count, and missing-value count.
+        4. Check the sidebar status card. It shows the **file name** and
+           **dataset dimensions** throughout the dashboard.
+
+        Google Sheets should be exported as CSV first. PDF files are not supported.
         """)
     
-    with st.expander("What if my data has missing values?"):
+    with st.expander("What should I check before analysis?"):
         st.markdown("""
-        Missing values are OK! The dashboard will:
-        - Show you where they are
-        - Skip them in analysis
-        - Warn you if there are too many
+        Open **Prepare Data → Check Data Quality** to:
+        - Review variable types and missing values
+        - Identify blocking errors and non-blocking warnings
+        - Assign independent variables (features/predictors)
+        - Assign dependent variables (targets/responses)
+
+        Missing values are allowed. Analyses remove missing observations where
+        necessary, and the dashboard warns when too little valid data remains.
         """)
     
-    with st.expander("What should I do after uploading?"):
+    with st.expander("What is the recommended workflow?"):
         st.markdown("""
-        1. **Check Data Quality** - Make sure everything looks right
-        2. **Explore Data** - See patterns and relationships
-        3. **Test Hypotheses** - Answer your research questions
-        4. **Build Predictions** - Train models (optional)
+        1. **Upload Data** and confirm the file status.
+        2. **Check Data Quality** and optionally rename variables.
+        3. **Explore Data** using Distributions, Correlations, Comparisons,
+           Part-to-Whole & Hierarchical, or Temporal charts.
+        4. **Test Distribution** and **Test Variance** for inference questions.
+           Numeric-variable selections are shared automatically between these pages.
+        5. Open **Suggested Analysis** to combine matching assumption results,
+           identify missing checks, and open a recommended inference test.
+        6. Use **Sensory Analysis** or **Advanced Analysis** when relevant.
         """)
 
-elif st.session_state.page == "help_analysis":
+    with st.expander("Why do my variable selections appear on other pages?"):
+        st.markdown("""
+        The dashboard intentionally reuses selections:
+        - Explore Data variables remain selected when switching chart categories.
+        - Test Distribution and Test Variance share one numeric-variable selection.
+        - Suggested Analysis uses that same selection and reports missing results
+          for each variable.
+        - A recommended test opens with its numeric and grouping variables preselected.
+
+        Uploading a different dataset or renaming columns safely refreshes related
+        state so results are not mixed between datasets.
+        """)
+
+elif st.session_state.page == "help_analysis_types":
     st.markdown("## ❓ Help: Analysis Types")
+    st.write("Choose a section based on the question you want to answer.")
     
     with st.expander("🔍 Explore Data", expanded=True):
         st.markdown("""
-        Shows you patterns in your data through:
-        - **Statistics:** Mean, median, standard deviation
-        - **Distributions:** Histograms showing data shape
-        - **Correlations:** Which variables go together
-        - **Visualizations:** Charts and plots
+        Use Explore Data to describe patterns before formal inference:
+        - **Distributions:** Histograms, categorical bars, box plots, and violin plots
+        - **Correlations:** Scatter, contour, bubble, and correlation heatmap charts
+        - **Comparisons:** Bar, grouped bar, and radar charts
+        - **Part-to-Whole & Hierarchical:** Pie, donut, treemap, and sunburst charts
+        - **Temporal:** Line, area, and stacked-area charts
+
+        Recommended chart cards are marked with ⭐. Variable selections are preserved
+        across categories, and chart options refresh automatically.
         """)
     
-    with st.expander("📊 Test Hypotheses"):
+    with st.expander("📐 Assumption Checks and Suggested Analysis"):
         st.markdown("""
-        Answers YES/NO questions like:
-        - "Are products different in quality?"
-        - "Does temperature affect taste?"
-        - "Is there a relationship between price and liking?"
-        
-        Uses p-values: p < 0.05 usually means YES
+        **Test Distribution** offers Automatic, Shapiro-Wilk,
+        D'Agostino-Pearson K², Anderson-Darling, and Kolmogorov-Smirnov options.
+        Review the histogram, fitted normal curve, Q-Q plot, and box plot.
+
+        **Test Variance** offers Automatic, Levene, Bartlett, and
+        Fligner-Killeen options. Review grouped box plots, violin plots, variance
+        bars, and group-level summaries.
+
+        **Suggested Analysis** matches both results by variable. It explains the
+        recommended parametric, adjusted-parametric, or non-parametric path,
+        identifies missing checks, and opens the recommended test directly.
+        """)
+
+    with st.expander("👥 Comparing Groups"):
+        st.markdown("""
+        - **Two independent groups:** Independent t-test, Welch t-test, or
+          Mann-Whitney U
+        - **Two related measurements:** Paired t-test or Wilcoxon signed-rank
+        - **Three or more independent groups:** One-way ANOVA, Kruskal-Wallis,
+          or Mood's median test
+        - **Pairwise follow-up:** Tukey HSD, Bonferroni, Scheffé, Fisher's LSD,
+          or Holm-adjusted Welch comparisons for parametric analyses; Dunn or
+          Conover-Iman with Holm correction for rank-based analyses
+        - **Two independent factors:** Two-way ANOVA, including both main effects
+          and their interaction
+        - **Three or more related measurements:** Repeated-measures ANOVA or Friedman
+
+        Parametric tests generally require approximately normal data. Standard
+        independent t-tests and ANOVA also rely on similar group variances.
+        Pairwise grouping letters indicate adjusted results: groups sharing a
+        letter are not significantly different.
+        """)
+
+    with st.expander("🔗 Relationships, Regression, and Categorical Data"):
+        st.markdown("""
+        - **Pearson correlation:** Linear relationship between approximately
+          normal numeric variables
+        - **Spearman correlation:** Monotonic rank relationship without a
+          normality requirement
+        - **Kendall's tau:** Rank association, especially useful for smaller
+          samples or tied ranks
+        - **Linear regression:** Predict a numeric outcome from a numeric predictor
+        - **Chi-square:** Association between two categorical variables
         """)
     
     with st.expander("👃 Sensory Analysis"):
         st.markdown("""
-        Special analysis for food/consumer testing:
-        - **Descriptive:** What does the product taste like?
-        - **Hedonic:** How much do consumers like it?
-        - **Comparison:** Which product is preferred?
+        - **Discrimination Tests:** Triangle, paired comparison, duo-trio,
+          tetrad, and ranking workflows
+        - **Descriptive Analysis:** QDA/sensory profiles and temporal methods
+        - **Panel Analysis:** Discrimination, repeatability, agreement, and scale use
+        - **Product Characterization:** Inferential comparisons and product maps
+        - **CATA and JAR:** Binary attribute associations and penalty analysis
+        - **Consumer Preference:** Hedonic testing, segmentation, and internal or
+          external preference mapping
+        - **Advanced Multivariate:** PCA, GPA, STATIS, hierarchical clustering,
+          MFA, and PLS regression
+
+        Each category expands into its individual analyses in the sidebar.
+        Pages explain the required data structure and validate the selected fields
+        before running an analysis.
         """)
     
-    with st.expander("🤖 Build Predictions"):
+    with st.expander("🤖 Advanced Analysis"):
         st.markdown("""
-        Teaches the computer to predict outcomes:
-        - **Classification:** "Will this product be liked?" (Yes/No)
-        - **Regression:** "What will the rating be?" (Number)
+        - **Build Predictions:** Train classification or regression models using
+          the variable roles selected during data-quality checking.
+        - **Get Recommendations:** Review model suggestions based on your goal,
+          dataset size, class balance, and pattern complexity.
         """)
-    
-    with st.expander("💡 Get Recommendations"):
-        st.markdown("""
-        Explains which analysis method to use for your question.
-        All recommendations are expert suggestions, not code!
-        """)
+
+elif st.session_state.page == "help_choose_tests":
+    show_test_decision_tree()
 
 # Footer
 st.markdown("---")

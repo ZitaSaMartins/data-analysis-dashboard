@@ -7,24 +7,32 @@ This guide helps you integrate the Data Analysis Dashboard into your curriculum 
 ### Suggested Learning Path
 
 #### Week 1-2: Data Preparation & Exploration
-- **Topics**: Data types, validation, missing values, outliers
-- **Dashboard sections**: Data Upload → Data Validation → EDA
+- **Topics**: Data types, validation, variable naming, missing values, outliers
+- **Dashboard sections**: Upload data → Rename variables (optional) → Check data
+  quality → Explore data
 - **Learning objective**: Students understand their data before analysis
 
 #### Week 3-4: Descriptive Statistics
-- **Topics**: Summary statistics, distributions, correlation
-- **Dashboard sections**: EDA (Summary Statistics, Distributions, Correlations)
+- **Topics**: Summary statistics, distributions, correlation, comparison charts
+- **Dashboard sections**: Explore data → Distribution, Correlation, and Comparison
+  categories
 - **Learning objective**: Describe data patterns numerically and visually
 
 #### Week 5-6: Hypothesis Testing
-- **Topics**: p-values, t-tests, ANOVA, effect sizes
-- **Dashboard sections**: Hypothesis Testing
-- **Learning objective**: Test research questions statistically
+- **Topics**: Checking assumptions (normality, variance), p-values, t-tests, ANOVA,
+  non-parametric alternatives, effect sizes
+- **Dashboard sections**: Test hypotheses → Test Distribution, Test Variance,
+  Parametric Tests, Non-parametric Tests
+- **Learning objective**: Test research questions statistically, choosing the
+  right test based on each test's own "when to use it" guidance
 
 #### Week 7: Sensory Analysis (if applicable)
-- **Topics**: Consumer preferences, sensory evaluation
+- **Topics**: ISO discrimination tests, descriptive profiling, panel and product
+  analysis, CATA, JAR penalty analysis, consumer preference, and multivariate
+  sensory methods
 - **Dashboard sections**: Sensory Analysis
-- **Learning objective**: Analyze human perception data
+- **Learning objective**: Select, run, visualize, and interpret sensory methods
+  for analytical panels and consumer studies
 
 #### Week 8: Machine Learning
 - **Topics**: Prediction, classification, model evaluation
@@ -61,9 +69,13 @@ This guide helps you integrate the Data Analysis Dashboard into your curriculum 
 
 **In-class activity**:
 1. Use the sample dataset
-2. Go to EDA section
-3. Create distributions, correlations, box plots
-4. **Discussion**:
+2. Go to the **Explore data** sub-menu and pick a category (e.g. **Distribution**
+   or **Correlation**)
+3. Point out the ⭐ recommended charts and live preview thumbnails — students can
+   see what a chart will look like before generating it
+4. Generate histograms, a correlation heatmap, and box plots; use the per-chart
+   "Customize" controls to adjust colors/titles
+5. **Discussion**:
    - What patterns do you see?
    - Which variables are related?
    - Any surprises in the data?
@@ -90,12 +102,20 @@ This guide helps you integrate the Data Analysis Dashboard into your curriculum 
    - H₁ (Alternative): There is a difference
    - α (significance level) = 0.05
 
-2. Use sample dataset with hypothesis:
-   - "Different products have different liking scores"
-   - Go to Hypothesis Testing → ANOVA
-   - Interpret p-value
+2. Check assumptions first, using the sample dataset:
+   - **Test Distribution** category → run normality test (the "Auto" option
+     picks Shapiro-Wilk for small samples, D'Agostino-Pearson for larger ones)
+   - **Test Variance** category → run Levene's test to check equal variance
+     across groups
 
-3. **Discussion**:
+3. Based on the results, pick the matching test:
+   - If normal + equal variance: **Parametric Tests** → One-Way ANOVA, testing
+     "Different products have different liking scores"
+   - If not: **Non-parametric Tests** → Kruskal-Wallis instead
+   - Each test card shows "What it does" and "When to use it" — have students
+     read this before running it
+
+4. **Discussion**:
    - Is p-value < 0.05? (Reject H₀ or fail to reject)
    - What does this mean for your research question?
    - How confident are you?
@@ -252,12 +272,16 @@ Example:
 - Show students how to "Save As" CSV in Excel
 - Have them try again
 
-### Problem: Data validation fails (column names with spaces/special characters)
+### Problem: Data validation flags unusual column names
 
 **Solution**:
-- Explain why: Python/SQL don't like spaces in names
-- Show correct format: `Product_Name` not `Product Name`
-- Have them fix in Excel locally
+- Parentheses (e.g. `Height (cm)`) are fine and no longer flagged — units are
+  common and safe in this dashboard
+- Students can fix genuinely risky characters (`! @ # $ % ^ & *`) directly in the
+  **Rename variables** page, which accepts any language/script if they prefer
+  translated or accented names
+- The **Issues** tab now shows true blockers in red and softer warnings in
+  yellow, so students can tell at a glance what actually needs fixing
 
 ### Problem: Student confused by p-value
 
@@ -398,10 +422,23 @@ If students are tech-savvy:
 3. Reference in README with descriptions
 
 ### Extending Dashboard
-1. Add new statistical tests in `modules/hypothesis_tests.py`
-2. Add new ML models in `modules/ml_models.py`
-3. Modify explanations and tooltips
-4. Redeploy (auto-updates on GitHub push)
+1. Add new statistical tests in the `modules/hypothesis_tests_comprehensive/`
+   package (the suite actually wired into the app) — add the test function to
+   the relevant file (`parametric.py`, `nonparametric.py`, `correlation.py`, or
+   `categorical.py`), export it from `__init__.py`, register its page handler
+   in `app.py`, and add its navigation button in `modules/sidebar_navigation/`.
+   The legacy `modules/hypothesis_tests/` package follows the same per-file
+   split (`parametric.py`/`nonparametric.py`/`catalog.py`'s `HYPOTHESIS_CATALOG`)
+   if you need to extend it instead.
+2. Add new chart types in the `modules/eda/` package — add an entry to
+   `CHART_CATALOG` in `catalog.py` (with a `requires` rule for when it should
+   be recommended), a renderer function in the matching chart file (e.g.
+   `distribution.py`, `correlation.py`, `comparison.py`, `part_to_whole.py`,
+   `temporal.py`), and register it with the `@_register(...)` decorator from
+   `registry.py`
+3. Add new ML models in `modules/ml_models.py`
+4. Modify explanations and tooltips
+5. Redeploy (auto-updates on GitHub push)
 
 ### Creating Assignments
 Use template:

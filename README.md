@@ -5,32 +5,90 @@ A free, no-code/low-code web application for data analysis, hypothesis testing, 
 ## Features
 
 ✅ **Data Upload & Validation**
-- Excel and CSV file upload
-- Automatic data format checking
+- Excel and CSV file upload, with the loaded filename always shown
+- Rename Variables page — rename any column, with full support for accents, special
+  characters, and any language script (e.g. 'Température', '甘み')
+- Automatic data format checking (non-blocking warnings vs. blocking errors)
 - Missing value detection
 - Variable type classification (continuous, categorical, binary)
+- Independent/Dependent variable role selection, reused across Explore Data and ML
 
 ✅ **Exploratory Data Analysis (EDA)**
-- Summary statistics
-- Distribution analysis (histograms, density plots)
-- Correlation matrices and heatmaps
-- Box plots and scatter plots
-- Outlier detection
+- Organized into five Explore Data sub-menus: Distributions, Correlations,
+  Comparisons, Part-to-Whole & Hierarchical, and Temporal
+- 19 interactive Plotly chart types (Bar, Grouped Bar, Radar, Scatter, Bubble,
+  Correlation Heatmap, Contour Plot, Pie, Donut, Treemap, Sunburst, Line, Area,
+  Stacked Area, Histogram, Categorical Bar, Box Plot, Violin Plot, Strip Plot) plus
+  a Summary Statistics table
+- ⭐ Recommended charts based on your selected variables, each with a live preview
+  thumbnail before you generate anything
+- Fully configurable: theme, color palette, color scale, font, and plot height,
+  plus per-chart color/title customization after generating
 
-✅ **Hypothesis Testing**
-- t-tests (independent samples)
-- ANOVA (one-way)
-- Mann-Whitney U test (non-parametric)
-- Chi-Square test (categorical)
-- Correlation tests (Pearson/Spearman)
-- Normality tests (Shapiro-Wilk)
+✅ **Statistical Inference**
+- Assumption checks for one or several variables: Shapiro-Wilk,
+  Kolmogorov-Smirnov, Levene's, Bartlett's, and Fligner-Killeen tests
+- Distribution testing offers Automatic, Shapiro-Wilk,
+  D'Agostino-Pearson K², Anderson-Darling, and Kolmogorov-Smirnov options,
+  with a sample-size-based recommendation for every selected variable
+- Histogram with a fitted normal curve, normal Q-Q plot, and box plot for
+  visual distribution inspection alongside the statistical test
+- Variance testing offers Automatic, Levene, Bartlett, and Fligner-Killeen
+  options, with recommendations based on prior distribution results, group
+  sizes, and extreme-outlier checks
+- Numeric-variable selections are shared automatically between Test
+  Distribution and Test Variance, so they only need to be chosen once
+- Grouped box plots, violin plots, variance bars, and group-level variance and
+  standard-deviation details support visual variance inspection
+- **Suggested Analysis** matches distribution and variance results by variable,
+  explains the supported inference path, and opens the recommended test with
+  the numeric and grouping variables already selected
+- Suggested Analysis uses the same shared variable selection and identifies
+  every variable with a missing distribution or variance result, with buttons
+  to complete the missing checks
+- Recommendations cover independent groups, paired or repeated observations,
+  one-sample questions, and numeric relationships
+- Tests are grouped by research question in nested, collapsible sub-menus:
+  Two Independent Groups, 3+ Groups (Single Factor), Multiple Factors,
+  Repeated Measures, Correlations, Regression, and Categorical
+- Parametric tests: one-sample, independent, and paired t-tests; one-way and
+  two-way ANOVA; repeated-measures ANOVA; Pearson correlation; and linear regression
+- Non-parametric tests: Mann-Whitney U, Wilcoxon signed-rank, Kruskal-Wallis,
+  Friedman, Mood's median, Spearman correlation, and Kendall's tau
+- One-way ANOVA, Kruskal-Wallis, and Mood's median analyses offer selectable
+  pairwise follow-ups with multiple-comparison correction and compact grouping
+  letters. Parametric options include Tukey HSD, Bonferroni, Scheffé, Fisher's
+  LSD, and Holm-adjusted Welch comparisons; non-parametric options include
+  Dunn and Conover-Iman with Holm correction
+- These 3+ group analyses support selecting multiple numeric outcome variables
+  and report each outcome separately using the same grouping variable
+- Chi-square testing for relationships between categorical variables
+- Plain-language interpretations plus effect sizes where applicable, including
+  Cohen's d and eta squared
+- Interactive **How to Choose Tests** guide that compares parametric and
+  non-parametric options for one, two, or three-or-more groups and opens the
+  selected test directly
+
+✅ **Hierarchical Navigation**
+- Home plus six collapsible sections: Prepare Data, Explore Data, Analyze
+  Relationships, Sensory Analysis, Advanced Analysis, and Help
+- Sub-menus remain collapsed until selected and automatically reopen around the
+  active page
+- The sidebar always shows the uploaded filename and dataset dimensions
 
 ✅ **Sensory Analysis**
-- Descriptive sensory profiling
-- Hedonic (liking) analysis
-- Attribute ratings summary
-- Panelist performance evaluation
-- Product comparison
+- ISO-aligned discrimination workflows: triangle, paired comparison, duo-trio,
+  tetrad, and ranking tests
+- Descriptive QDA/sensory profiling and temporal sensory methods
+- Panel discrimination, repeatability, agreement/consensus, and scale-use checks
+- Product characterization with inferential comparisons and product maps
+- CATA frequency testing and product-attribute mapping
+- JAR distributions and penalty analysis
+- Hedonic testing, consumer segmentation, and internal/external preference maps
+- Advanced multivariate tools: PCA, GPA, STATIS, hierarchical clustering, MFA,
+  and PLS regression
+- Twenty-four nested sensory routes keep each teaching workflow focused and
+  automatically reopen the active submenu
 
 ✅ **Machine Learning**
 - Classification models:
@@ -111,39 +169,53 @@ Give them the Streamlit Cloud URL (looks like: `https://your-username-data-analy
 ### For Students
 
 1. **Upload Data**
-   - Click "📤 Upload Data"
-   - Select your Excel or CSV file
+   - Click "Upload data" in the sidebar
+   - Select your Excel or CSV file — the filename stays visible once loaded
    - Verify the preview looks correct
 
-2. **Validate Data**
-   - Go to "✅ Data Validation"
+2. **Rename Variables (optional)**
+   - Click "Rename variables" in the sidebar
+   - Edit column names directly in the table — accents, special characters, and
+     any language script are supported
+   - Renames automatically carry over to every other page (variable roles, EDA, ML)
+
+3. **Check Data Quality**
+   - Go to "Check data quality"
    - Review column types and missing values
-   - Specify which variables are dependent (target) vs independent (features)
+   - Specify which variables are independent (features) vs. dependent (target)
 
-3. **Explore Data**
-   - Select "🔍 Exploratory Analysis"
-   - Choose analysis components (distributions, correlations, etc.)
-   - Interpret the visualizations
+4. **Explore Data**
+   - Pick a category directly under Explore (Comparison, Correlation,
+     Part-to-Whole & Hierarchical, Temporal, or Distribution)
+   - Pick from the recommended (⭐) or other chart types, using the live preview
+     to decide
+   - Generate the analysis, then fine-tune colors/titles per chart
 
-4. **Test Hypotheses**
-   - Go to "📊 Hypothesis Testing"
-   - Select the appropriate test for your question
-   - Interpret p-values and effect sizes
+5. **Statistical Inference**
+   - Open **Analyze Relationships** and run Test Distribution and Test Variance
+     when the test you plan to use requires those assumptions
+   - Open **Suggested Analysis** to combine the matching results and review the
+     recommended parametric, adjusted-parametric, or non-parametric path
+   - Choose a test under Two Independent Groups, 3+ Groups (Single Factor),
+     Multiple Factors, Repeated Measures, Correlations, Regression, or Categorical
+   - If you are unsure, open **Help → How to Choose Tests** and follow the
+     interactive guide
+   - Interpret p-values and effect sizes using the built-in guidance
 
-5. **Build Models**
-   - Select "🤖 Machine Learning"
+6. **Build Models**
+   - Select "Build predictions"
    - Choose a model
    - Train and evaluate
 
-6. **Get Recommendations**
-   - Use "💡 Model Recommender" to understand which models to use
+7. **Get Recommendations**
+   - Use "Get recommendations" to understand which models to use
    - Learn when and why to use each approach
 
 ### For Instructors
 
 **Suggested Learning Path:**
 1. Week 1: EDA (understanding data)
-2. Week 2: Hypothesis Testing (answering questions)
+2. Week 2: Statistical Inference (answering questions)
 3. Week 3: Sensory Analysis (if applicable to your course)
 4. Week 4: Machine Learning (prediction)
 
@@ -192,9 +264,56 @@ data-analysis-dashboard/
 ├── modules/
 │   ├── __init__.py
 │   ├── data_validation.py         # Data format checking
-│   ├── eda.py                     # Exploratory analysis
-│   ├── hypothesis_tests.py        # Statistical tests
-│   ├── sensory_analysis.py        # Sensory evaluation
+│   ├── eda/                       # Exploratory analysis (package)
+│   │   ├── __init__.py            # Re-exports run_eda, recommend_components, build_preview, CHART_*
+│   │   ├── theme.py               # Palettes, default settings, shared plot rendering
+│   │   ├── catalog.py             # Chart catalog metadata and component recommendations
+│   │   ├── preview.py             # Small read-only chart thumbnails
+│   │   ├── registry.py            # Renderer registry and the run_eda entry point
+│   │   ├── distribution.py        # Histogram, categorical bar, box/violin/strip
+│   │   ├── correlation.py         # Scatter, bubble, heatmap, contour
+│   │   ├── comparison.py          # Bar, grouped bar, radar
+│   │   ├── part_to_whole.py       # Pie, donut, treemap, sunburst
+│   │   └── temporal.py            # Line, area, stacked area
+│   ├── sidebar_navigation/        # Hierarchical navigation and test guide (package)
+│   │   ├── __init__.py            # Re-exports build_main_navigation, show_sidebar_status, show_test_decision_tree
+│   │   ├── page_sets.py           # Page-id sets used to auto-expand sidebar sections
+│   │   ├── _shared.py             # Page switching and active-state helpers
+│   │   ├── main_nav.py            # The hierarchical sidebar navigation builder
+│   │   ├── decision_tree.py       # Interactive "choose a test" decision guide
+│   │   └── status.py              # Sidebar footer showing dataset status
+│   ├── hypothesis_tests/          # Legacy statistical workflow (package, superseded below)
+│   │   ├── __init__.py            # Re-exports run_hypothesis_tests and menu catalogs
+│   │   ├── catalog.py             # Menu category and test-group metadata
+│   │   ├── _navigation.py         # Page-navigation helper
+│   │   ├── core.py                # Page dispatch and shared layout helpers
+│   │   ├── suggested_path.py      # "Suggested Path" recommendation page
+│   │   ├── distribution.py        # "Test Distribution" (normality) page
+│   │   ├── variance.py            # "Test Variance" page
+│   │   ├── correlation.py         # Shared Pearson/Spearman correlation test
+│   │   ├── parametric.py          # t-tests, ANOVA, and the parametric test-list page
+│   │   └── nonparametric.py       # Mann-Whitney, Wilcoxon, Kruskal-Wallis, Chi-square
+│   ├── hypothesis_tests_comprehensive/ # Current statistical test suite (package)
+│   │   ├── __init__.py            # Re-exports the public page functions
+│   │   ├── _shared.py             # Cross-cutting helpers (column pickers, result rendering)
+│   │   ├── distribution.py        # Normality assumption checks
+│   │   ├── variance.py            # Equal-variance assumption checks
+│   │   ├── recommendations.py     # Suggested Analysis (combines both checks)
+│   │   ├── posthoc.py             # Shared pairwise/post-hoc comparison engine
+│   │   ├── parametric.py          # t-tests and ANOVA family
+│   │   ├── nonparametric.py       # Mann-Whitney, Wilcoxon, Kruskal-Wallis, Friedman, Mood's median
+│   │   ├── correlation.py         # Pearson/Spearman/Kendall and linear regression
+│   │   └── categorical.py         # Chi-square test
+│   ├── sensory_analysis/          # Sensory evaluation (package)
+│   │   ├── __init__.py            # Re-exports run_sensory_page and compatibility wrappers
+│   │   ├── _shared.py             # Data prep, significance labelling, common plots
+│   │   ├── discrimination.py      # Triangle/paired/duo-trio/tetrad and ranking tests
+│   │   ├── profiling.py           # QDA, temporal curves, product characterization
+│   │   ├── panel_performance.py   # Panelist discrimination, repeatability, agreement, scale
+│   │   ├── cata_jar.py            # Check-All-That-Apply and JAR penalty analysis
+│   │   ├── hedonic.py             # Liking comparisons, segmentation, preference mapping
+│   │   ├── multivariate.py        # PCA, GPA, STATIS, HAC, MFA, PLS
+│   │   └── core.py                # Navigation routing and backward-compatible entry points
 │   ├── ml_models.py               # ML pipeline
 │   └── model_recommender.py       # Expert system for recommendations
 └── README.md
@@ -205,9 +324,16 @@ data-analysis-dashboard/
 - **pandas**: Data manipulation
 - **numpy**: Numerical computing
 - **scikit-learn**: Machine learning
-- **matplotlib/seaborn**: Visualization
+- **matplotlib/seaborn**: Visualization (hypothesis testing, sensory analysis, ML)
+- **plotly**: Interactive visualization (EDA charts)
 - **scipy**: Statistical functions
+- **statsmodels**: Two-way and repeated-measures ANOVA
 - **openpyxl**: Excel file reading
+
+### Theming
+The sidebar and overall color palette are configured in `.streamlit/config.toml`
+(separate `[theme]` and `[theme.sidebar]` sections). Edit this file to change the
+accent colors without touching any Python code.
 
 ### Performance Notes
 - Streamlit Cloud free tier has some limitations:
@@ -231,7 +357,10 @@ A: Yes! Fork the repo, make changes, and redeploy. Since it's Python, you can ad
 A: You can share the same app URL. Streamlit Cloud can handle multiple concurrent users. For heavy traffic, consider upgrading or deploying on another platform.
 
 **Q: How do I add my own statistical test?**
-A: Edit `modules/hypothesis_tests.py`, add your test function, then update `app.py` to call it.
+A: Add the test to the appropriate file inside the `modules/hypothesis_tests_comprehensive/`
+package (e.g. `parametric.py`, `nonparametric.py`, `correlation.py`, or `categorical.py`),
+export it from `__init__.py`, register its page handler in `app.py`, and add its
+navigation button in `modules/sidebar_navigation/main_nav.py`.
 
 ## Troubleshooting
 
@@ -274,6 +403,27 @@ For questions or issues:
 3. Create a GitHub issue
 
 ## Changelog
+
+### v1.1
+- Redesigned navigation with Home and six collapsible sections: Prepare Data,
+  Explore Data, Analyze Relationships, Sensory Analysis, Advanced Analysis,
+  and Help
+- New Rename Variables page (Prepare section) with full Unicode/special-character
+  support, propagated automatically to variable-role selections, EDA, and ML
+- Uploaded filename is now shown persistently after upload
+- EDA rebuilt on Plotly: 5 chart categories, 19 chart types, ⭐ recommendations,
+  live previews, and per-chart color/title customization after generating
+- Statistical inference reorganized by research question with nested,
+  click-to-expand test groups
+- Added a comprehensive test suite covering assumption checks, parametric and
+  non-parametric group comparisons, correlations, regression, and categorical
+  analysis
+- Added an interactive decision tree under Help → How to Choose Tests
+- Added direct sensory-analysis routes for descriptive, hedonic, and product
+  comparison views
+- Data validation no longer flags parentheses as invalid, and the Issues tab
+  distinguishes blocking errors from non-blocking warnings
+- Custom color theme via `.streamlit/config.toml`
 
 ### v1.0 (Initial Release)
 - EDA functionality
