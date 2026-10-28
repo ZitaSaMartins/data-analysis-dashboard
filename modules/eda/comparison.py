@@ -53,12 +53,15 @@ def _bar_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, independe
     palette = _palette(settings)
 
     if grouped:
-        long = agg.melt(id_vars=cat_var, value_vars=num_vars, var_name="Variable", value_name="Value")
+        value_column = "_value"
+        while value_column in num_vars or value_column in (cat_var, "Variable"):
+            value_column = f"_{value_column}"
+        long = agg.melt(id_vars=cat_var, value_vars=num_vars, var_name="Variable", value_name=value_column)
         with st.expander(f"🎨 Customize: {default_title}"):
             bar_title = st.text_input("Title", default_title, key="bar_grouped_title")
             st.caption("Series colors:")
             series_colors = _category_colors(num_vars, settings, key_prefix="bar_grouped")
-        fig = px.bar(long, x=cat_var, y="Value", color="Variable", barmode="group",
+        fig = px.bar(long, x=cat_var, y=value_column, color="Variable", barmode="group",
                     color_discrete_map=series_colors)
     else:
         with st.expander(f"🎨 Customize: {default_title}"):

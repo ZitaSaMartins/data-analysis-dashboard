@@ -175,7 +175,11 @@ def _bubble_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, indepe
             bubble_color = st.color_picker("Bubble color", palette[0], key=f"bubble_color_{settings['palette']}")
             color_kwargs = {"color_discrete_sequence": [bubble_color]}
 
-    plot_df = df.assign(_bubble_size=df[size_var].abs())
+    plot_df = df.dropna(subset=[size_var])
+    if plot_df.empty:
+        st.info("No rows have a value for the selected size variable.")
+        return
+    plot_df = plot_df.assign(_bubble_size=plot_df[size_var].abs())
     fig = px.scatter(plot_df, x=x_var, y=y_var, size="_bubble_size", color=color_by,
                      size_max=max_size, opacity=0.7, **color_kwargs)
     fig.update_xaxes(title=x_var)

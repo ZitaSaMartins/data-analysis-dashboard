@@ -11,11 +11,14 @@ def _decision_option(
     description: str,
     page: str | None = None,
     key: str | None = None,
+    session_state: dict[str, object] | None = None,
 ) -> None:
     with column:
         st.markdown(f"### {title}")
         st.write(description)
         if page and key and st.button("Open this test", key=key, width="stretch"):
+            for state_key, value in (session_state or {}).items():
+                st.session_state[state_key] = value
             _navigate(page)
 
 
@@ -82,6 +85,7 @@ def show_test_decision_tree() -> None:
             "Use when a numeric sample is not normal or contains influential outliers.",
             "nonparametric_wilcoxon",
             "decision_one_sample_wilcoxon",
+            session_state={"wilcoxon_mode": "One sample vs reference"},
         )
         return
 
@@ -122,6 +126,7 @@ def show_test_decision_tree() -> None:
             "Compares two related measurements using ranks.",
             "nonparametric_wilcoxon",
             "decision_wilcoxon",
+            session_state={"wilcoxon_mode": "Paired measurements"},
         )
     elif relationship == "Independent":
         _decision_option(

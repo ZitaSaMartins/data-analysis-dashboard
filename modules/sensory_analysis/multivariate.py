@@ -101,13 +101,31 @@ def _statis(df: pd.DataFrame) -> None:
     assessor, product, attributes = selected
     grouped = [(name, group.groupby(product, observed=True)[attributes].mean().dropna())
                for name, group in df.groupby(assessor, observed=True)]
+    if not _need(
+        len(grouped) >= 2,
+        "Need at least two assessor tables (check the assessor column for missing values).",
+    ):
+        return
     common = grouped[0][1].index
     for _, table in grouped[1:]:
         common = common.intersection(table.index)
-    if not _need(len(grouped) >= 2 and len(common) >= 3, "Need two tables sharing at least three products."):
+    if not _need(len(common) >= 3, "Need two tables sharing at least three products."):
         return
     tables = [StandardScaler().fit_transform(table.loc[common]) for _, table in grouped]
     cross_products = [table @ table.T for table in tables]
+    traces = [float(np.trace(cross_product)) for cross_product in cross_products]
+    zero_norm_names = [str(name) for (name, _), trace in zip(grouped, traces) if trace <= 1e-12]
+    if zero_norm_names:
+        st.warning(
+            "Excluded assessor table(s) with constant scores across the shared products "
+            f"(zero variance): {', '.join(zero_norm_names)}."
+        )
+        keep = [trace > 1e-12 for trace in traces]
+        grouped = [item for item, keep_item in zip(grouped, keep) if keep_item]
+        tables = [table for table, keep_item in zip(tables, keep) if keep_item]
+        cross_products = [cp for cp, keep_item in zip(cross_products, keep) if keep_item]
+    if not _need(len(grouped) >= 2, "Need at least two non-constant assessor tables."):
+        return
     rv = np.array([
         [np.trace(a @ b) / np.sqrt(np.trace(a @ a) * np.trace(b @ b)) for b in cross_products]
         for a in cross_products

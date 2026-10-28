@@ -10,6 +10,15 @@ from scipy import stats
 from ._shared import _columns, _heatmap, _need
 
 
+def _melt_value_name(df: pd.DataFrame, *reserved: str) -> str:
+    """Return a column name for melt's ``value_name`` that cannot collide with existing columns."""
+    name = "_rating"
+    existing = set(df.columns.astype(str)) | set(reserved)
+    while name in existing:
+        name = f"_{name}"
+    return name
+
+
 def _panel_discrimination(df: pd.DataFrame) -> None:
     st.header("Panel Discrimination")
     st.write("For each assessor and attribute, a one-way ANOVA measures separation among products.")
@@ -21,13 +30,14 @@ def _panel_discrimination(df: pd.DataFrame) -> None:
     product = st.selectbox("Product", [c for c in columns if c != panelist], key="pd_product")
     attributes = st.multiselect("Attributes", [c for c in numeric if c not in {panelist, product}],
                                 default=[c for c in numeric if c not in {panelist, product}][:4], key="pd_attr")
+    rating_col = _melt_value_name(df, panelist, product, "Attribute")
     rows: list[dict[str, object]] = []
     for (judge, attribute), group in (
-        df.melt(id_vars=[panelist, product], value_vars=attributes, var_name="Attribute", value_name="Rating")
+        df.melt(id_vars=[panelist, product], value_vars=attributes, var_name="Attribute", value_name=rating_col)
         .dropna()
         .groupby([panelist, "Attribute"], observed=True)
     ):
-        samples = [values["Rating"].to_numpy() for _, values in group.groupby(product) if len(values) > 1]
+        samples = [values[rating_col].to_numpy() for _, values in group.groupby(product) if len(values) > 1]
         if len(samples) >= 2:
             statistic, p_value = stats.f_oneway(*samples)
             rows.append({"Assessor": judge, "Attribute": attribute, "F": statistic, "p-value": p_value})
@@ -52,9 +62,10 @@ def _panel_repeatability(df: pd.DataFrame) -> None:
     replicate = st.selectbox("Replicate", [c for c in columns if c not in {panelist, product}], key="pr_rep")
     attributes = st.multiselect("Attributes", [c for c in numeric if c not in {panelist, product, replicate}],
                                 default=[c for c in numeric if c not in {panelist, product, replicate}][:4], key="pr_attr")
+    rating_col = _melt_value_name(df, panelist, product, replicate, "Attribute")
     long = df.melt(id_vars=[panelist, product, replicate], value_vars=attributes,
-                   var_name="Attribute", value_name="Rating").dropna()
-    within = long.groupby([panelist, product, "Attribute"], observed=True)["Rating"].agg(["std", "count"]).reset_index()
+                   var_name="Attribute", value_name=rating_col).dropna()
+    within = long.groupby([panelist, product, "Attribute"], observed=True)[rating_col].agg(["std", "count"]).reset_index()
     within = within[within["count"] > 1]
     if not _need(not within.empty, "No repeated assessor-product ratings were found."):
         return
@@ -105,8 +116,11 @@ def _panel_scale(df: pd.DataFrame) -> None:
     panelist = st.selectbox("Assessor", df.columns.astype(str).tolist(), key="ps_panel")
     attributes = st.multiselect("Attributes", [c for c in numeric if c != panelist],
                                 default=[c for c in numeric if c != panelist][:5], key="ps_attr")
-    long = df.melt(id_vars=panelist, value_vars=attributes, var_name="Attribute", value_name="Rating").dropna()
-    metrics = long.groupby([panelist, "Attribute"], observed=True)["Rating"].agg(["mean", "std", "min", "max"]).reset_index()
+    rating_col = _melt_value_name(df, panelist, "Attribute")
+    long = df.melt(id_vars=panelist, value_vars=attributes, var_name="Attribute", value_name=rating_col).dropna()
+    metrics = long.groupby([panelist, "Attribute"], observed=True)[rating_col].agg(["mean", "std", "min", "max"]).reset_index()
+    if not _need(not metrics.empty, "Select at least one attribute with ratings."):
+        return
     metrics["Range"] = metrics["max"] - metrics["min"]
     metrics["Centered mean"] = metrics["mean"] - metrics.groupby("Attribute")["mean"].transform("mean")
     st.dataframe(metrics, width="stretch")

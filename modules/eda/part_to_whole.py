@@ -95,7 +95,11 @@ def _hierarchical_chart(df: pd.DataFrame, settings: dict, dependent_vars: list, 
         kwargs["color"] = values_col
         kwargs["color_continuous_scale"] = settings["colorscale"]
 
-    fig = px.treemap(df, **kwargs) if kind == "treemap" else px.sunburst(df, **kwargs)
+    clean = df.dropna(subset=path_vars)
+    if clean.empty:
+        st.info("No rows have complete values across all selected hierarchy levels.")
+        return
+    fig = px.treemap(clean, **kwargs) if kind == "treemap" else px.sunburst(clean, **kwargs)
     _plot(fig, settings, title=chart_title)
 
 

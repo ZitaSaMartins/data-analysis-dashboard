@@ -7,6 +7,7 @@ from collections.abc import Callable
 import pandas as pd
 import streamlit as st
 
+from ._shared import _normalize_columns
 from .cata_jar import _cata, _jar
 from .discrimination import _discrimination, _ranking
 from .hedonic import _external_preference, _hedonic, _internal_preference, _segmentation
@@ -54,7 +55,7 @@ def run_sensory_page(df: pd.DataFrame, page: str) -> None:
     if workflow is None:
         st.error(f"Unknown sensory route: {page}")
         return
-    workflow(df)
+    workflow(_normalize_columns(df))
 
 
 def run_sensory_analysis(
@@ -82,25 +83,25 @@ def run_sensory_analysis(
 
 def descriptive_analysis(df: pd.DataFrame) -> None:
     """Compatibility wrapper for the original descriptive workflow."""
-    _qda(df)
+    _qda(_normalize_columns(df))
 
 
 def hedonic_analysis(df: pd.DataFrame) -> None:
     """Compatibility wrapper for the original hedonic workflow."""
-    _hedonic(df)
+    _hedonic(_normalize_columns(df))
 
 
 def attribute_summary(df: pd.DataFrame) -> None:
     """Compatibility wrapper for the original attribute-summary workflow."""
-    _pca(df)
+    _pca(_normalize_columns(df))
 
 
 def panelist_performance(df: pd.DataFrame) -> None:
     """Compatibility wrapper for the original panelist workflow."""
-    _panel_repeatability(df)
+    _panel_repeatability(_normalize_columns(df))
 
 
 def product_comparison(df: pd.DataFrame) -> None:
     """Compatibility wrapper for the original product-comparison workflow."""
-    _product_characterization(df)
+    _product_characterization(_normalize_columns(df))
 

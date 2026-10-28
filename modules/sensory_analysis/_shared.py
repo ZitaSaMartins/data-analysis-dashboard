@@ -19,6 +19,20 @@ def _columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
     return numeric, categorical
 
 
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure column labels are strings before any selector runs.
+
+    Selectors across this package stringify column labels for display and then
+    index the original frame with the selected string. If the frame's actual
+    labels are not already strings (for example integer headers preserved by
+    ``pd.read_excel``), that indexing raises ``KeyError``. Normalizing once at
+    each entry point keeps the displayed and actual labels consistent.
+    """
+    if all(isinstance(column, str) for column in df.columns):
+        return df
+    return df.rename(columns=str)
+
+
 def _need(condition: bool, message: str) -> bool:
     if not condition:
         st.error(message)
@@ -30,7 +44,9 @@ def _frame(df: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
 
 
 def _interpret_p(p_value: float, subject: str = "products") -> None:
-    if p_value < 0.05:
+    if not np.isfinite(p_value):
+        st.error("The test produced an invalid (non-finite) p-value. Check the selected data.")
+    elif p_value < 0.05:
         st.success(f"Evidence of differences among {subject} (p={p_value:.4g}).")
     else:
         st.info(f"No statistically significant difference among {subject} (p={p_value:.4g}).")
