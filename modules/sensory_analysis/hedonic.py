@@ -26,7 +26,10 @@ def _hedonic(df: pd.DataFrame) -> None:
     if not _need(bool(numeric) and len(columns) >= 2, "Need product and numeric liking columns."):
         return
     product = st.selectbox("Product", columns, key="hed_product")
-    liking = st.selectbox("Liking", [c for c in numeric if c != product], key="hed_liking")
+    liking_candidates = [c for c in numeric if c != product]
+    if not _need(bool(liking_candidates), "Select a Product column that leaves a numeric Liking column available."):
+        return
+    liking = st.selectbox("Liking", liking_candidates, key="hed_liking")
     consumer = st.selectbox("Consumer (optional)", ["(independent observations)", *[c for c in columns if c not in {product, liking}]],
                             key="hed_consumer")
     clean = _frame(df, [product, liking] + ([] if consumer.startswith("(") else [consumer]))
@@ -120,7 +123,10 @@ def _consumer_matrix(df: pd.DataFrame, prefix: str) -> tuple[pd.DataFrame, str, 
         return None
     consumer = st.selectbox("Consumer", columns, key=f"{prefix}_consumer")
     product = st.selectbox("Product", [c for c in columns if c != consumer], key=f"{prefix}_product")
-    liking = st.selectbox("Liking", [c for c in numeric if c not in {consumer, product}], key=f"{prefix}_liking")
+    liking_candidates = [c for c in numeric if c not in {consumer, product}]
+    if not _need(bool(liking_candidates), "Select Consumer/Product columns that leave a numeric Liking column available."):
+        return None
+    liking = st.selectbox("Liking", liking_candidates, key=f"{prefix}_liking")
     matrix = df.pivot_table(index=consumer, columns=product, values=liking, aggfunc="mean").dropna()
     if not _need(matrix.shape[0] >= 3 and matrix.shape[1] >= 2, "Need at least 3 complete consumers and 2 products."):
         return None

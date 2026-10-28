@@ -243,6 +243,12 @@ def _pls(df: pd.DataFrame) -> None:
     maximum = min(len(predictors), max(1, len(clean) - 1))
     if not _need(bool(responses) and bool(predictors) and len(clean) >= 3, "Select X and Y with 3 complete rows."):
         return
+    zero_variance = [column for column in (*predictors, *responses) if clean[column].std(ddof=0) == 0]
+    if not _need(
+        not zero_variance,
+        f"The following column(s) are constant and cannot be used in PLS: {', '.join(zero_variance)}.",
+    ):
+        return
     if maximum <= 1:
         components = 1
         st.caption("Using 1 component (the maximum supported by the selected predictors/rows).")

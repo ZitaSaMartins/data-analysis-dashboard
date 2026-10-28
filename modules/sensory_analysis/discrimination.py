@@ -84,7 +84,10 @@ def _ranking(df: pd.DataFrame) -> None:
     columns = df.columns.astype(str).tolist()
     assessor = st.selectbox("Assessor", columns, key="rank_assessor")
     product = st.selectbox("Product", [c for c in columns if c != assessor], key="rank_product")
-    rank = st.selectbox("Rank", [c for c in numeric if c not in {assessor, product}], key="rank_value")
+    rank_candidates = [c for c in numeric if c not in {assessor, product}]
+    if not _need(bool(rank_candidates), "Select Assessor/Product columns that leave a numeric Rank column available."):
+        return
+    rank = st.selectbox("Rank", rank_candidates, key="rank_value")
     pivot = df.pivot_table(index=assessor, columns=product, values=rank, aggfunc="mean").dropna()
     if not _need(pivot.shape[0] >= 2 and pivot.shape[1] >= 3, "Need at least 2 complete assessors and 3 products."):
         return

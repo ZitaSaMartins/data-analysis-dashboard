@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
@@ -56,8 +57,14 @@ def _temporal(df: pd.DataFrame) -> None:
     if not _need(len(numeric) >= 2 and df.shape[1] >= 3, "Need time, product, and numeric response columns."):
         return
     product = st.selectbox("Product", df.columns.astype(str).tolist(), key="temporal_product")
-    time = st.selectbox("Time", [c for c in numeric if c != product], key="temporal_time")
-    response = st.selectbox("Intensity / dominance score", [c for c in numeric if c not in {product, time}], key="temporal_y")
+    time_candidates = [c for c in numeric if c != product]
+    if not _need(bool(time_candidates), "Select a Product column that leaves a numeric Time column available."):
+        return
+    time = st.selectbox("Time", time_candidates, key="temporal_time")
+    response_candidates = [c for c in numeric if c not in {product, time}]
+    if not _need(bool(response_candidates), "Select Product/Time columns that leave a numeric response column available."):
+        return
+    response = st.selectbox("Intensity / dominance score", response_candidates, key="temporal_y")
     clean = _frame(df, [product, time, response])
     summary = clean.groupby([product, time], observed=True)[response].agg(["mean", "std", "count"]).reset_index()
     st.dataframe(summary, width="stretch")
@@ -79,7 +86,9 @@ def _temporal(df: pd.DataFrame) -> None:
         interaction_p = float(
             anova.loc[anova["Effect"] == "C(_product):C(_time)", "PR(>F)"].iloc[0]
         )
-        if interaction_p < 0.05:
+        if not np.isfinite(interaction_p):
+            st.error("The product × time interaction produced an invalid (non-finite) p-value.")
+        elif interaction_p < 0.05:
             st.success("Temporal trajectories differ significantly among products.")
         else:
             st.info("No significant product × time interaction was detected.")

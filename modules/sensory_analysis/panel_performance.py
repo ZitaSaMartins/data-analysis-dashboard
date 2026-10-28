@@ -86,7 +86,10 @@ def _panel_agreement(df: pd.DataFrame) -> None:
         return
     panelist = st.selectbox("Assessor", columns, key="pa_panel")
     product = st.selectbox("Product", [c for c in columns if c != panelist], key="pa_product")
-    rating = st.selectbox("Rating", [c for c in numeric if c not in {panelist, product}], key="pa_rating")
+    rating_candidates = [c for c in numeric if c not in {panelist, product}]
+    if not _need(bool(rating_candidates), "Select Assessor/Product columns that leave a numeric Rating column available."):
+        return
+    rating = st.selectbox("Rating", rating_candidates, key="pa_rating")
     matrix = df.pivot_table(index=product, columns=panelist, values=rating, aggfunc="mean").dropna()
     if not _need(matrix.shape[0] >= 3 and matrix.shape[1] >= 2, "Need 3 common products rated by at least 2 assessors."):
         return
