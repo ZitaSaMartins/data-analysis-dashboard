@@ -348,11 +348,12 @@ if st.session_state.page == "home":
     st.markdown("### 🗺️ How it works")
     st.markdown("""
     Use the **menu in the sidebar** to navigate between steps:
-    1. **Upload & Prepare** — Upload Data, then Check Data Quality
+    1. **Upload & Prepare** — Upload Data, Check Data Quality, then Rename Variables
     2. **Explore** — Choose a chart category to explore patterns and relationships
     3. **Statistical Inference** — Check assumptions, review Suggested Analysis, then choose a test
     4. **Sensory** — Open the independent Sensory Analysis module when needed
     5. **Advanced** — Build Predictions, Get Recommendations
+    6. **Help** — Getting Started, Analysis Types, and How to Choose Tests guides
     """)
     
     # Footer

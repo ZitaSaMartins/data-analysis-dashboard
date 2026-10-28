@@ -264,11 +264,56 @@ data-analysis-dashboard/
 ├── modules/
 │   ├── __init__.py
 │   ├── data_validation.py         # Data format checking
-│   ├── eda.py                     # Exploratory analysis
-│   ├── sidebar_navigation.py      # Hierarchical navigation and test guide
-│   ├── hypothesis_tests.py        # Legacy statistical workflow
-│   ├── hypothesis_tests_comprehensive.py # Current statistical test suite
-│   ├── sensory_analysis.py        # Sensory evaluation
+│   ├── eda/                       # Exploratory analysis (package)
+│   │   ├── __init__.py            # Re-exports run_eda, recommend_components, build_preview, CHART_*
+│   │   ├── theme.py               # Palettes, default settings, shared plot rendering
+│   │   ├── catalog.py             # Chart catalog metadata and component recommendations
+│   │   ├── preview.py             # Small read-only chart thumbnails
+│   │   ├── registry.py            # Renderer registry and the run_eda entry point
+│   │   ├── distribution.py        # Histogram, categorical bar, box/violin/strip
+│   │   ├── correlation.py         # Scatter, bubble, heatmap, contour
+│   │   ├── comparison.py          # Bar, grouped bar, radar
+│   │   ├── part_to_whole.py       # Pie, donut, treemap, sunburst
+│   │   └── temporal.py            # Line, area, stacked area
+│   ├── sidebar_navigation/        # Hierarchical navigation and test guide (package)
+│   │   ├── __init__.py            # Re-exports build_main_navigation, show_sidebar_status, show_test_decision_tree
+│   │   ├── page_sets.py           # Page-id sets used to auto-expand sidebar sections
+│   │   ├── _shared.py             # Page switching and active-state helpers
+│   │   ├── main_nav.py            # The hierarchical sidebar navigation builder
+│   │   ├── decision_tree.py       # Interactive "choose a test" decision guide
+│   │   └── status.py              # Sidebar footer showing dataset status
+│   ├── hypothesis_tests/          # Legacy statistical workflow (package, superseded below)
+│   │   ├── __init__.py            # Re-exports run_hypothesis_tests and menu catalogs
+│   │   ├── catalog.py             # Menu category and test-group metadata
+│   │   ├── _navigation.py         # Page-navigation helper
+│   │   ├── core.py                # Page dispatch and shared layout helpers
+│   │   ├── suggested_path.py      # "Suggested Path" recommendation page
+│   │   ├── distribution.py        # "Test Distribution" (normality) page
+│   │   ├── variance.py            # "Test Variance" page
+│   │   ├── correlation.py         # Shared Pearson/Spearman correlation test
+│   │   ├── parametric.py          # t-tests, ANOVA, and the parametric test-list page
+│   │   └── nonparametric.py       # Mann-Whitney, Wilcoxon, Kruskal-Wallis, Chi-square
+│   ├── hypothesis_tests_comprehensive/ # Current statistical test suite (package)
+│   │   ├── __init__.py            # Re-exports the public page functions
+│   │   ├── _shared.py             # Cross-cutting helpers (column pickers, result rendering)
+│   │   ├── distribution.py        # Normality assumption checks
+│   │   ├── variance.py            # Equal-variance assumption checks
+│   │   ├── recommendations.py     # Suggested Analysis (combines both checks)
+│   │   ├── posthoc.py             # Shared pairwise/post-hoc comparison engine
+│   │   ├── parametric.py          # t-tests and ANOVA family
+│   │   ├── nonparametric.py       # Mann-Whitney, Wilcoxon, Kruskal-Wallis, Friedman, Mood's median
+│   │   ├── correlation.py         # Pearson/Spearman/Kendall and linear regression
+│   │   └── categorical.py         # Chi-square test
+│   ├── sensory_analysis/          # Sensory evaluation (package)
+│   │   ├── __init__.py            # Re-exports run_sensory_page and compatibility wrappers
+│   │   ├── _shared.py             # Data prep, significance labelling, common plots
+│   │   ├── discrimination.py      # Triangle/paired/duo-trio/tetrad and ranking tests
+│   │   ├── profiling.py           # QDA, temporal curves, product characterization
+│   │   ├── panel_performance.py   # Panelist discrimination, repeatability, agreement, scale
+│   │   ├── cata_jar.py            # Check-All-That-Apply and JAR penalty analysis
+│   │   ├── hedonic.py             # Liking comparisons, segmentation, preference mapping
+│   │   ├── multivariate.py        # PCA, GPA, STATIS, HAC, MFA, PLS
+│   │   └── core.py                # Navigation routing and backward-compatible entry points
 │   ├── ml_models.py               # ML pipeline
 │   └── model_recommender.py       # Expert system for recommendations
 └── README.md
@@ -312,9 +357,10 @@ A: Yes! Fork the repo, make changes, and redeploy. Since it's Python, you can ad
 A: You can share the same app URL. Streamlit Cloud can handle multiple concurrent users. For heavy traffic, consider upgrading or deploying on another platform.
 
 **Q: How do I add my own statistical test?**
-A: Add the test to `modules/hypothesis_tests_comprehensive.py`, register its page
-handler in `app.py`, and add its navigation button in
-`modules/sidebar_navigation.py`.
+A: Add the test to the appropriate file inside the `modules/hypothesis_tests_comprehensive/`
+package (e.g. `parametric.py`, `nonparametric.py`, `correlation.py`, or `categorical.py`),
+export it from `__init__.py`, register its page handler in `app.py`, and add its
+navigation button in `modules/sidebar_navigation/main_nav.py`.
 
 ## Troubleshooting
 

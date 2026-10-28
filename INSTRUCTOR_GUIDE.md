@@ -422,13 +422,20 @@ If students are tech-savvy:
 3. Reference in README with descriptions
 
 ### Extending Dashboard
-1. Add new statistical tests in `modules/hypothesis_tests.py` — add the test
-   function, a "what it does"/"when to use it" entry in the relevant list
-   (`run_parametric_tests`/`run_nonparametric_tests`), or a new key in
-   `HYPOTHESIS_CATALOG` for a whole new category
-2. Add new chart types in `modules/eda.py` — add an entry to `CHART_CATALOG`
-   (with a `requires` rule for when it should be recommended), a renderer
-   function, and register it in `_RENDERERS`
+1. Add new statistical tests in the `modules/hypothesis_tests_comprehensive/`
+   package (the suite actually wired into the app) — add the test function to
+   the relevant file (`parametric.py`, `nonparametric.py`, `correlation.py`, or
+   `categorical.py`), export it from `__init__.py`, register its page handler
+   in `app.py`, and add its navigation button in `modules/sidebar_navigation/`.
+   The legacy `modules/hypothesis_tests/` package follows the same per-file
+   split (`parametric.py`/`nonparametric.py`/`catalog.py`'s `HYPOTHESIS_CATALOG`)
+   if you need to extend it instead.
+2. Add new chart types in the `modules/eda/` package — add an entry to
+   `CHART_CATALOG` in `catalog.py` (with a `requires` rule for when it should
+   be recommended), a renderer function in the matching chart file (e.g.
+   `distribution.py`, `correlation.py`, `comparison.py`, `part_to_whole.py`,
+   `temporal.py`), and register it with the `@_register(...)` decorator from
+   `registry.py`
 3. Add new ML models in `modules/ml_models.py`
 4. Modify explanations and tooltips
 5. Redeploy (auto-updates on GitHub push)
