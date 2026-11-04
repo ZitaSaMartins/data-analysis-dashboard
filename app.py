@@ -378,8 +378,8 @@ if st.session_state.page == "upload":
     with col1:
         uploaded_file = st.file_uploader(
             "📎 Select file:",
-            type=["xlsx", "xls", "csv"],
-            help="Supported formats: Excel (.xlsx, .xls) or CSV"
+            type=["xlsx", "xls", "csv", "xlsm"],
+            help="Supported formats: Excel (.xlsx, .xls, .xlsm) or CSV"
         )
     
     if uploaded_file is not None:
