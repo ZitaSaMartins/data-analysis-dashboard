@@ -997,7 +997,10 @@ elif st.session_state.page == "help_analysis_types":
         - **Descriptive Analysis:** QDA/sensory profiles and temporal methods
         - **Panel Analysis:** Discrimination, repeatability, agreement, and scale use
         - **Product Characterization:** Inferential comparisons and product maps
-        - **CATA and JAR:** Binary attribute associations and penalty analysis
+        - **CATA:** Data validation, Cochran's Q with pairwise letters, attribute
+          independence, Correspondence Analysis, correlation/PCoA, and an
+          ideal-product penalty analysis
+        - **JAR:** Just-About-Right penalty analysis
         - **Consumer Preference:** Hedonic testing, segmentation, and internal or
           external preference mapping
         - **Advanced Multivariate:** PCA, GPA, STATIS, hierarchical clustering,

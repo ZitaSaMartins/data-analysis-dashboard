@@ -82,7 +82,9 @@ A free, no-code/low-code web application for data analysis, hypothesis testing, 
 - Descriptive QDA/sensory profiling and temporal sensory methods
 - Panel discrimination, repeatability, agreement/consensus, and scale-use checks
 - Product characterization with inferential comparisons and product maps
-- CATA frequency testing and product-attribute mapping
+- CATA data validation, Cochran's Q with pairwise letters, attribute
+  independence testing, Correspondence Analysis, correlation/PCoA mapping, and
+  an ideal-product penalty analysis (must-have / nice-to-have / must-not-have)
 - JAR distributions and penalty analysis
 - Hedonic testing, consumer segmentation, and internal/external preference maps
 - Advanced multivariate tools: PCA, GPA, STATIS, hierarchical clustering, MFA,

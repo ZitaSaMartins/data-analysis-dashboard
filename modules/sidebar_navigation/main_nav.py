@@ -290,7 +290,7 @@ def build_main_navigation() -> None:
                 expanded=st.session_state.get("page") == "sensory_cata",
             ):
                 _nav_button(
-                    "CATA Frequencies & Map",
+                    "CATA Analysis",
                     "sensory_cata",
                     "sidebar_sensory_cata",
                 )
