@@ -1,6 +1,9 @@
 """Page-id sets used to decide which sidebar section should start expanded."""
 
 
+HOME_PAGES = {"home"}
+
+
 PREPARE_PAGES = {"upload", "validate", "rename"}
 
 
@@ -72,4 +75,59 @@ HELP_PAGES = {
     "help_analysis_types",
     "help_choose_tests",
 }
+
+
+# Top-level app sections shown as a horizontal bar. Each section's sidebar
+# only renders the submenu for whichever section is currently active.
+SECTIONS = [
+    {
+        "id": "home",
+        "label": "Home",
+        "icon": "🏠",
+        "default_page": "home",
+        "pages": HOME_PAGES,
+    },
+    {
+        "id": "prepare",
+        "label": "Prepare Data",
+        "icon": "📤",
+        "default_page": "upload",
+        "pages": PREPARE_PAGES,
+    },
+    {
+        "id": "explore",
+        "label": "Explore Data",
+        "icon": "🔍",
+        "default_page": "eda_distributions",
+        "pages": EXPLORE_PAGES,
+    },
+    {
+        "id": "relationships",
+        "label": "Analyze Relationships",
+        "icon": "📊",
+        "default_page": "test_distribution",
+        "pages": RELATIONSHIP_PAGES,
+    },
+    {
+        "id": "sensory",
+        "label": "Sensory Analysis",
+        "icon": "👃",
+        "default_page": "sensory_triangle",
+        "pages": SENSORY_PAGES,
+    },
+    {
+        "id": "advanced",
+        "label": "Advanced Analysis",
+        "icon": "🤖",
+        "default_page": "machine_learning",
+        "pages": ADVANCED_PAGES,
+    },
+    {
+        "id": "help",
+        "label": "Help",
+        "icon": "❓",
+        "default_page": "help_getting_started",
+        "pages": HELP_PAGES,
+    },
+]
 

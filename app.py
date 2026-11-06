@@ -10,6 +10,7 @@ from modules.data_validation import validate_dataset, generate_validation_report
 from modules.eda import run_eda, recommend_components, build_preview, CHART_INFO, CHART_CATALOG
 from modules.sidebar_navigation import (
     build_main_navigation,
+    build_top_navigation,
     show_sidebar_status,
     show_test_decision_tree,
 )
@@ -217,6 +218,44 @@ st.markdown("""
     section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
         background-color: rgba(255,255,255,0.14);
     }
+
+    /* Top section bar - horizontal replacement for the long sidebar menu */
+    .st-key-top_nav {
+        background-color: #0E3C61;
+        border-radius: 10px;
+        padding: 0.5rem 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .st-key-top_nav .stButton > button {
+        width: 100%;
+        min-height: 3rem;
+        background-color: transparent;
+        color: #C7DCE5;
+        border: none;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        padding: 0.6rem 0.3rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        white-space: normal;
+        line-height: 1.2;
+    }
+
+    .st-key-top_nav .stButton > button p {
+        white-space: normal;
+    }
+
+    .st-key-top_nav .stButton > button:hover {
+        background-color: rgba(255,255,255,0.08);
+        color: #ffffff;
+    }
+
+    .st-key-top_nav .stButton > button[kind="primary"] {
+        background-color: rgba(255,255,255,0.1);
+        color: #ffffff;
+        border-bottom: 3px solid #FFBF3E;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -330,6 +369,7 @@ def store_eda_dependent_selection():
     )
 
 
+build_top_navigation()
 build_main_navigation()
 show_sidebar_status()
 

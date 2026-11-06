@@ -69,11 +69,13 @@ A free, no-code/low-code web application for data analysis, hypothesis testing, 
   non-parametric options for one, two, or three-or-more groups and opens the
   selected test directly
 
-✅ **Hierarchical Navigation**
-- Home plus six collapsible sections: Prepare Data, Explore Data, Analyze
-  Relationships, Sensory Analysis, Advanced Analysis, and Help
-- Sub-menus remain collapsed until selected and automatically reopen around the
-  active page
+✅ **Top Bar + Contextual Sidebar Navigation**
+- A horizontal top bar switches between Home, Prepare Data, Explore Data,
+  Analyze Relationships, Sensory Analysis, Advanced Analysis, and Help
+- The sidebar only shows the submenu for the active section, keeping it short;
+  deeper sub-menus (e.g. within Analyze Relationships or Sensory Analysis)
+  automatically reopen around the active page
+- Returning to a section resumes the last page you viewed within it
 - The sidebar always shows the uploaded filename and dataset dimensions
 
 ✅ **Sensory Analysis**
@@ -277,11 +279,12 @@ data-analysis-dashboard/
 │   │   ├── comparison.py          # Bar, grouped bar, radar
 │   │   ├── part_to_whole.py       # Pie, donut, treemap, sunburst
 │   │   └── temporal.py            # Line, area, stacked area
-│   ├── sidebar_navigation/        # Hierarchical navigation and test guide (package)
-│   │   ├── __init__.py            # Re-exports build_main_navigation, show_sidebar_status, show_test_decision_tree
-│   │   ├── page_sets.py           # Page-id sets used to auto-expand sidebar sections
-│   │   ├── _shared.py             # Page switching and active-state helpers
-│   │   ├── main_nav.py            # The hierarchical sidebar navigation builder
+│   ├── sidebar_navigation/        # Top bar + section-scoped sidebar navigation and test guide (package)
+│   │   ├── __init__.py            # Re-exports build_top_navigation, build_main_navigation, show_sidebar_status, show_test_decision_tree
+│   │   ├── page_sets.py           # Page-id sets and the SECTIONS list describing each top-bar section
+│   │   ├── _shared.py             # Page switching and active-section helpers
+│   │   ├── top_nav.py             # The horizontal top bar that selects the active section
+│   │   ├── main_nav.py            # Renders only the active section's submenu in the sidebar
 │   │   ├── decision_tree.py       # Interactive "choose a test" decision guide
 │   │   └── status.py              # Sidebar footer showing dataset status
 │   ├── hypothesis_tests/          # Legacy statistical workflow (package, superseded below)

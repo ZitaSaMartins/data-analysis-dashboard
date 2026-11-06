@@ -26,3 +26,16 @@ def _nav_button(label: str, page: str, key: str) -> None:
 def _is_active(pages: Iterable[str]) -> bool:
     return st.session_state.get("page", "home") in pages
 
+
+def _active_section(sections: list[dict]) -> dict:
+    """Return the section whose ``pages`` set contains the current page.
+
+    Falls back to the first entry (expected to be "home") if the current
+    page does not belong to any known section.
+    """
+    current_page = st.session_state.get("page", "home")
+    for section in sections:
+        if current_page in section["pages"]:
+            return section
+    return sections[0]
+
