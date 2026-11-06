@@ -5,7 +5,6 @@ import re
 import plotly.express as px
 import streamlit as st
 
-
 DEFAULT_SETTINGS = {
     "template": "plotly_white",
     "palette": "Plotly",

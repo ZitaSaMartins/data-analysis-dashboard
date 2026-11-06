@@ -1,40 +1,39 @@
 import pandas as pd
-import numpy as np
+
 
 def recommend_models(analysis_type: str, df: pd.DataFrame, characteristics: list) -> list:
     """
     Recommend models based on analysis type and data characteristics.
     Uses an expert system approach (no API calls, completely free).
     """
-    
+
     # Analyze dataset
     n_samples = len(df)
     n_features = len(df.columns)
-    numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
-    
+
     recommendations = []
-    
+
     if analysis_type == "EDA":
         recommendations = recommend_eda(df, characteristics)
-    
+
     elif analysis_type == "Hypothesis Testing":
         recommendations = recommend_hypothesis_tests(df, characteristics)
-    
+
     elif analysis_type == "Classification":
         recommendations = recommend_classification(df, n_samples, n_features, characteristics)
-    
+
     elif analysis_type == "Regression":
         recommendations = recommend_regression(df, n_samples, n_features, characteristics)
-    
+
     elif analysis_type == "Sensory Analysis":
         recommendations = recommend_sensory(df, characteristics)
-    
+
     return recommendations
 
 
 def recommend_eda(df: pd.DataFrame, characteristics: list) -> list:
     """Recommend EDA approaches."""
-    
+
     return [
         {
             'model': 'Descriptive Statistics',
@@ -81,7 +80,7 @@ def recommend_eda(df: pd.DataFrame, characteristics: list) -> list:
 
 def recommend_hypothesis_tests(df: pd.DataFrame, characteristics: list) -> list:
     """Recommend hypothesis tests."""
-    
+
     return [
         {
             'model': 't-test (parametric)',
@@ -136,9 +135,9 @@ def recommend_hypothesis_tests(df: pd.DataFrame, characteristics: list) -> list:
 
 def recommend_classification(df: pd.DataFrame, n_samples: int, n_features: int, characteristics: list) -> list:
     """Recommend classification models."""
-    
+
     recommendations = []
-    
+
     # Logistic Regression
     recommendations.append({
         'model': 'Logistic Regression',
@@ -148,14 +147,14 @@ def recommend_classification(df: pd.DataFrame, n_samples: int, n_features: int, 
         'cons': 'Assumes linear boundary, poor with complex patterns.',
         'when_to_use': 'Interpretability matters, baseline model, small samples.'
     })
-    
+
     # Random Forest
     suitability = 9
     if n_samples < 50:
         suitability = 6
     if "Imbalanced classes" in characteristics:
         suitability -= 1
-    
+
     recommendations.append({
         'model': 'Random Forest',
         'suitability': suitability,
@@ -164,7 +163,7 @@ def recommend_classification(df: pd.DataFrame, n_samples: int, n_features: int, 
         'cons': 'Slower to train, less interpretable, can overfit on small samples.',
         'when_to_use': 'Many features, complex patterns, moderate-to-large datasets.'
     })
-    
+
     # SVM recommendation
     recommendations.append({
         'model': 'Support Vector Machine (SVM)',
@@ -174,7 +173,7 @@ def recommend_classification(df: pd.DataFrame, n_samples: int, n_features: int, 
         'cons': 'Sensitive to feature scaling, slower on large datasets.',
         'when_to_use': 'High-dimensional data (feature scaling required).'
     })
-    
+
     # Naive Bayes
     recommendations.append({
         'model': 'Naive Bayes',
@@ -184,15 +183,15 @@ def recommend_classification(df: pd.DataFrame, n_samples: int, n_features: int, 
         'cons': 'Assumes feature independence (often not true).',
         'when_to_use': 'Fast predictions needed, text classification, categorical features.'
     })
-    
+
     return sorted(recommendations, key=lambda x: x['suitability'], reverse=True)
 
 
 def recommend_regression(df: pd.DataFrame, n_samples: int, n_features: int, characteristics: list) -> list:
     """Recommend regression models."""
-    
+
     recommendations = []
-    
+
     # Linear Regression
     recommendations.append({
         'model': 'Linear Regression',
@@ -202,7 +201,7 @@ def recommend_regression(df: pd.DataFrame, n_samples: int, n_features: int, char
         'cons': 'Assumes linearity, sensitive to outliers.',
         'when_to_use': 'Interpretability required, linear relationship expected.'
     })
-    
+
     # Ridge/Lasso
     recommendations.append({
         'model': 'Ridge/Lasso Regression',
@@ -212,14 +211,14 @@ def recommend_regression(df: pd.DataFrame, n_samples: int, n_features: int, char
         'cons': 'Requires parameter tuning, adds complexity.',
         'when_to_use': 'Many correlated features, need to prevent overfitting.'
     })
-    
+
     # Random Forest Regression
     suitability = 9
     if n_samples < 50:
         suitability = 6
     if "Non-linear relationships" in characteristics:
         suitability = 10
-    
+
     recommendations.append({
         'model': 'Random Forest Regression',
         'suitability': suitability,
@@ -228,7 +227,7 @@ def recommend_regression(df: pd.DataFrame, n_samples: int, n_features: int, char
         'cons': 'Less interpretable, slower, can overfit small datasets.',
         'when_to_use': 'Non-linear patterns expected, moderate-to-large sample size.'
     })
-    
+
     # Gradient Boosting
     recommendations.append({
         'model': 'Gradient Boosting (XGBoost)',
@@ -238,7 +237,7 @@ def recommend_regression(df: pd.DataFrame, n_samples: int, n_features: int, char
         'cons': 'Slower to train, more tuning required, less interpretable.',
         'when_to_use': 'Maximum accuracy needed, larger datasets, you have time to tune.'
     })
-    
+
     # Polynomial Regression
     recommendations.append({
         'model': 'Polynomial Regression',
@@ -248,13 +247,13 @@ def recommend_regression(df: pd.DataFrame, n_samples: int, n_features: int, char
         'cons': 'Can overfit, requires careful degree selection.',
         'when_to_use': 'Clear non-linear pattern (U-shape, quadratic) visible in data.'
     })
-    
+
     return sorted(recommendations, key=lambda x: x['suitability'], reverse=True)
 
 
 def recommend_sensory(df: pd.DataFrame, characteristics: list) -> list:
     """Recommend sensory analysis methods."""
-    
+
     return [
         {
             'model': 'Descriptive Sensory Analysis (Sensory Profile)',

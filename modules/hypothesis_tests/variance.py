@@ -1,6 +1,5 @@
 """Legacy "Test Variance" (homogeneity of variance) page."""
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -68,7 +67,7 @@ def run_test_variance(df: pd.DataFrame):
             ]
             valid = [
                 (group, data)
-                for group, data in zip(all_groups, group_data)
+                for group, data in zip(all_groups, group_data, strict=False)
                 if len(data) >= 2
             ]
             if len(valid) < 2:
@@ -76,7 +75,7 @@ def run_test_variance(df: pd.DataFrame):
                     f"'{numeric_var}' needs at least two groups with two observations each — skipped."
                 )
                 continue
-            groups, valid_group_data = zip(*valid)
+            groups, valid_group_data = zip(*valid, strict=False)
 
             if test_choice == "levene":
                 stat, p_value = stats.levene(*valid_group_data)
@@ -120,7 +119,7 @@ def run_test_variance(df: pd.DataFrame):
                 "n": len(data),
                 "Variance": np.var(data, ddof=1),
                 "Std Dev": np.std(data, ddof=1),
-            } for group, data in zip(groups, valid_group_data))
+            } for group, data in zip(groups, valid_group_data, strict=False))
 
         if not results:
             return

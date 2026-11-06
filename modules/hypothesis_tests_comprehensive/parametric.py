@@ -431,7 +431,7 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
         )
 
         metric_columns = st.columns(3)
-        for metric_column, result in zip(metric_columns, result_rows):
+        for metric_column, result in zip(metric_columns, result_rows, strict=False):
             with metric_column:
                 st.markdown(f"**{result['Effect']}**")
                 st.metric("p-value", f"{result['p-value']:.4f}")

@@ -365,7 +365,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
         plot_tabs = st.tabs(list(plotted_values))
         for tab, (column, grouped_values) in zip(
             plot_tabs,
-            plotted_values.items(),
+            plotted_values.items(), strict=False,
         ):
             with tab:
                 st.plotly_chart(

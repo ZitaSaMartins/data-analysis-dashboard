@@ -327,7 +327,7 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
             "reference line, and has no severe asymmetry or extreme outliers."
         )
         plot_tabs = st.tabs(list(plotted_values))
-        for tab, (column, values) in zip(plot_tabs, plotted_values.items()):
+        for tab, (column, values) in zip(plot_tabs, plotted_values.items(), strict=False):
             with tab:
                 st.plotly_chart(
                     _distribution_diagnostic_figure(values, column),

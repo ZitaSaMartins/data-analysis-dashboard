@@ -21,7 +21,7 @@ def build_top_navigation() -> None:
 
     with st.container(key="top_nav"):
         columns = st.columns(len(SECTIONS))
-        for column, section in zip(columns, SECTIONS):
+        for column, section in zip(columns, SECTIONS, strict=False):
             with column:
                 is_active = section["id"] == active_section["id"]
                 if st.button(

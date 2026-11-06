@@ -1,0 +1,7 @@
+# Development tooling: linting, security scanning, and tests.
+# Install alongside requirements.txt:
+#   pip install -r requirements.txt -r requirements-dev.txt
+ruff>=0.17.4
+bandit>=1.9.4
+pip-audit>=2.10.1
+pytest>=9.2.0

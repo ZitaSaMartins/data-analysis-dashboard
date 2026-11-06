@@ -2,11 +2,10 @@
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 import streamlit as st
+from scipy import stats
 
 from .theme import _settings
-
 
 _RENDERERS = {}
 
@@ -43,30 +42,30 @@ def run_eda(df: pd.DataFrame, components: list, variables: list = None,
 def show_summary_statistics(df: pd.DataFrame):
     """Display summary statistics for numeric columns."""
     st.markdown("### Summary Statistics")
-    
+
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    
+
     if not numeric_cols:
         st.info("No numeric columns selected for summary statistics.")
         return
-    
+
     summary = df[numeric_cols].describe().T
     summary['Missing'] = df[numeric_cols].isnull().sum()
     summary['Missing %'] = (summary['Missing'] / len(df) * 100).round(2)
-    
+
     st.dataframe(summary, use_container_width=True)
-    
+
     # Skewness and Kurtosis
     st.markdown("#### Distribution Shape (Skewness & Kurtosis)")
-    
+
     skew_kurt = pd.DataFrame({
         'Column': numeric_cols,
         'Skewness': [stats.skew(df[col].dropna()) for col in numeric_cols],
         'Kurtosis': [stats.kurtosis(df[col].dropna()) for col in numeric_cols]
     })
-    
+
     st.dataframe(skew_kurt, use_container_width=True)
-    
+
     st.caption("Skewness: Negative (left-skewed) | 0 (symmetric) | Positive (right-skewed)")
     st.caption("Kurtosis: Negative (flat) | 0 (normal) | Positive (peaked)")
 

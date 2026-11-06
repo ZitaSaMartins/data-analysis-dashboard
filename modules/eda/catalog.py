@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 
-
 CHART_CATALOG = {
     "Comparison": {
         "Bar Chart": {"icon": "📶", "desc": "Compare a numeric value across categories.",

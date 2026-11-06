@@ -117,7 +117,7 @@ def _scatter_labels(
 ) -> None:
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.scatter(coordinates[:, 0], coordinates[:, 1], s=55)
-    for label, (x_value, y_value) in zip(labels, coordinates[:, :2]):
+    for label, (x_value, y_value) in zip(labels, coordinates[:, :2], strict=False):
         ax.annotate(str(label), (x_value, y_value), xytext=(4, 4), textcoords="offset points")
     ax.axhline(0, color="grey", linewidth=0.7)
     ax.axvline(0, color="grey", linewidth=0.7)
@@ -167,7 +167,7 @@ def _product_grouping_letters(
         tukey = pairwise_tukeyhsd(clean[attribute].to_numpy(), labels, alpha=0.05)
         first_indices, second_indices = tukey._multicomp.pairindices
         significant_pairs: set[tuple[str, str]] = set()
-        for index, (first_index, second_index) in enumerate(zip(first_indices, second_indices)):
+        for index, (first_index, second_index) in enumerate(zip(first_indices, second_indices, strict=False)):
             if tukey.reject[index]:
                 significant_pairs.add(
                     tuple(

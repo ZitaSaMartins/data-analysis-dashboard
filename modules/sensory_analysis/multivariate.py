@@ -114,16 +114,16 @@ def _statis(df: pd.DataFrame) -> None:
     tables = [StandardScaler().fit_transform(table.loc[common]) for _, table in grouped]
     cross_products = [table @ table.T for table in tables]
     traces = [float(np.trace(cross_product)) for cross_product in cross_products]
-    zero_norm_names = [str(name) for (name, _), trace in zip(grouped, traces) if trace <= 1e-12]
+    zero_norm_names = [str(name) for (name, _), trace in zip(grouped, traces, strict=False) if trace <= 1e-12]
     if zero_norm_names:
         st.warning(
             "Excluded assessor table(s) with constant scores across the shared products "
             f"(zero variance): {', '.join(zero_norm_names)}."
         )
         keep = [trace > 1e-12 for trace in traces]
-        grouped = [item for item, keep_item in zip(grouped, keep) if keep_item]
-        tables = [table for table, keep_item in zip(tables, keep) if keep_item]
-        cross_products = [cp for cp, keep_item in zip(cross_products, keep) if keep_item]
+        grouped = [item for item, keep_item in zip(grouped, keep, strict=False) if keep_item]
+        tables = [table for table, keep_item in zip(tables, keep, strict=False) if keep_item]
+        cross_products = [cp for cp, keep_item in zip(cross_products, keep, strict=False) if keep_item]
     if not _need(len(grouped) >= 2, "Need at least two non-constant assessor tables."):
         return
     rv = np.array([
@@ -133,7 +133,7 @@ def _statis(df: pd.DataFrame) -> None:
     eigenvalues, eigenvectors = np.linalg.eigh(rv)
     weights = np.abs(eigenvectors[:, -1])
     weights /= weights.sum()
-    compromise = sum(weight * cross_product for weight, cross_product in zip(weights, cross_products))
+    compromise = sum(weight * cross_product for weight, cross_product in zip(weights, cross_products, strict=False))
     compromise_eigenvalues, compromise_eigenvectors = np.linalg.eigh(compromise)
     order = np.argsort(compromise_eigenvalues)[::-1][:2]
     scale = np.sqrt(np.clip(compromise_eigenvalues[order], 0, None))

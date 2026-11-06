@@ -1,6 +1,5 @@
 """Non-parametric tests: Mann-Whitney, Wilcoxon, Kruskal-Wallis, Friedman, Mood's median."""
 
-import numpy as np
 import pandas as pd
 import streamlit as st
 from scipy import stats

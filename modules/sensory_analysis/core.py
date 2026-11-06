@@ -20,7 +20,6 @@ from .panel_performance import (
 )
 from .profiling import _product_characterization, _qda, _temporal
 
-
 ROUTES: dict[str, Callable[[pd.DataFrame], None]] = {
     "sensory_triangle": lambda df: _discrimination(df, "Triangle Test", 1 / 3, "triangle"),
     "sensory_paired": lambda df: _discrimination(df, "Paired Comparison", 1 / 2, "paired"),

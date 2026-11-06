@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import streamlit as st
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
@@ -113,7 +113,7 @@ def _ranking(df: pd.DataFrame) -> None:
     adjusted = multipletests(raw_p_values, alpha=0.05, method="holm")[1]
     significant_pairs = {
         tuple(sorted((first, second)))
-        for (first, second, _, _), adjusted_p in zip(pair_metadata, adjusted)
+        for (first, second, _, _), adjusted_p in zip(pair_metadata, adjusted, strict=False)
         if adjusted_p < 0.05
     }
     letters = _compact_letters(products, significant_pairs)
@@ -131,7 +131,7 @@ def _ranking(df: pd.DataFrame) -> None:
                     "Significant (5%)": adjusted_p < 0.05,
                 }
                 for (first, second, pair_statistic, mean_difference), adjusted_p in zip(
-                    pair_metadata, adjusted
+                    pair_metadata, adjusted, strict=False
                 )
             ]
         ),

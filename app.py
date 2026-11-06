@@ -1,43 +1,41 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-from io import StringIO
 import hashlib
-import sys
+
+import pandas as pd
+import streamlit as st
 
 # Import custom modules
-from modules.data_validation import validate_dataset, generate_validation_report
-from modules.eda import run_eda, recommend_components, build_preview, CHART_INFO, CHART_CATALOG
+from modules.data_validation import generate_validation_report, validate_dataset
+from modules.eda import CHART_CATALOG, CHART_INFO, build_preview, recommend_components, run_eda
+from modules.hypothesis_tests_comprehensive import (
+    run_distribution_tests,
+    run_variance_tests,
+    show_suggested_analysis,
+    test_anova,
+    test_chi_square,
+    test_friedman,
+    test_independent_ttest,
+    test_kendall,
+    test_kruskal_wallis,
+    test_linear_regression,
+    test_mannwhitney,
+    test_mood_median,
+    test_one_sample_ttest,
+    test_paired_ttest,
+    test_pearson_correlation,
+    test_repeated_anova,
+    test_spearman,
+    test_two_way_anova,
+    test_wilcoxon,
+)
+from modules.ml_models import run_ml_pipeline
+from modules.model_recommender import recommend_models
+from modules.sensory_analysis import run_sensory_page
 from modules.sidebar_navigation import (
     build_main_navigation,
     build_top_navigation,
     show_sidebar_status,
     show_test_decision_tree,
 )
-from modules.hypothesis_tests_comprehensive import (
-    run_distribution_tests,
-    run_variance_tests,
-    show_suggested_analysis,
-    test_one_sample_ttest,
-    test_independent_ttest,
-    test_paired_ttest,
-    test_anova,
-    test_two_way_anova,
-    test_repeated_anova,
-    test_pearson_correlation,
-    test_linear_regression,
-    test_mannwhitney,
-    test_wilcoxon,
-    test_kruskal_wallis,
-    test_friedman,
-    test_spearman,
-    test_kendall,
-    test_mood_median,
-    test_chi_square,
-)
-from modules.sensory_analysis import run_sensory_page
-from modules.ml_models import run_ml_pipeline
-from modules.model_recommender import recommend_models
 
 # Page config
 st.set_page_config(
@@ -52,7 +50,7 @@ st.markdown("""
     <style>
     /* Hide the default sidebar menu */
     [data-testid="stSidebarNav"] {display: none;}
-    
+
     /* Main header */
     .main-header {
         font-size: 3rem;
@@ -61,14 +59,14 @@ st.markdown("""
         text-align: center;
         margin-bottom: 0.5rem;
     }
-    
+
     .subtitle {
         font-size: 1.1rem;
         color: #555;
         text-align: center;
         margin-bottom: 2rem;
     }
-    
+
     /* Card styling for menu buttons */
     .menu-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -83,12 +81,12 @@ st.markdown("""
         font-size: 1.1rem;
         font-weight: bold;
     }
-    
+
     .menu-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     }
-    
+
     .menu-card.upload { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
     .menu-card.validate { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
     .menu-card.eda { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
@@ -96,9 +94,9 @@ st.markdown("""
     .menu-card.sensory { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
     .menu-card.ml { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
     .menu-card.recommend { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
-    
+
     .menu-card.recommend { color: #333; }
-    
+
     /* Section headers */
     .section-header {
         font-size: 1.8rem;
@@ -109,7 +107,7 @@ st.markdown("""
         border-bottom: 3px solid #667eea;
         padding-bottom: 0.5rem;
     }
-    
+
     .step-number {
         background: #667eea;
         color: white;
@@ -123,7 +121,7 @@ st.markdown("""
         font-size: 1.2rem;
         margin-right: 1rem;
     }
-    
+
     .info-box {
         background: #e8f4f8;
         border-left: 4px solid #0288d1;
@@ -131,7 +129,7 @@ st.markdown("""
         margin: 1rem 0;
         border-radius: 5px;
     }
-    
+
     .success-box {
         background: #e8f5e9;
         border-left: 4px solid #4caf50;
@@ -139,7 +137,7 @@ st.markdown("""
         margin: 1rem 0;
         border-radius: 5px;
     }
-    
+
     .back-button {
         background: #f0f0f0;
         color: #333;
@@ -150,7 +148,7 @@ st.markdown("""
         margin-bottom: 1rem;
         display: inline-block;
     }
-    
+
     /* Sidebar menu - flat list style with chevrons, like a help-center nav */
     section[data-testid="stSidebar"] p.nav-section-label {
         color: #8DB2D9;
@@ -192,7 +190,7 @@ st.markdown("""
         width: 100%;
         justify-content: flex-start;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button::after {
         content: "›";
         position: absolute;
@@ -202,19 +200,19 @@ st.markdown("""
         font-size: 1.1rem;
         opacity: 0.55;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button:hover {
         background-color: rgba(255,255,255,0.08);
         color: #ffffff;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
         background-color: rgba(255,255,255,0.1);
         color: #ffffff;
         border-left: 3px solid #FFBF3E;
         font-weight: 700;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
         background-color: rgba(255,255,255,0.14);
     }
@@ -378,13 +376,13 @@ show_sidebar_status()
 if st.session_state.page == "home":
     st.markdown('<p class="main-header">📊 Data Analysis Dashboard</p>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Your easy guide to understanding data without coding</p>', unsafe_allow_html=True)
-    
+
     st.markdown("---")
     if st.session_state.df is not None:
         st.success(f"✅ Data loaded: {st.session_state.df.shape[0]} rows × {st.session_state.df.shape[1]} columns")
     else:
         st.info("👉 Use the sidebar menu to get started — begin with **Upload Data**")
-    
+
     st.markdown("### 🗺️ How it works")
     st.markdown("""
     Use the **menu in the sidebar** to navigate between steps:
@@ -395,7 +393,7 @@ if st.session_state.page == "home":
     5. **Advanced** — Build Predictions, Get Recommendations
     6. **Help** — Getting Started, Analysis Types, and How to Choose Tests guides
     """)
-    
+
     # Footer
     st.markdown("---")
     st.markdown("""
@@ -410,10 +408,10 @@ if st.session_state.page == "home":
 if st.session_state.page == "upload":
     st.markdown("## 📤 Upload Your Data")
     st.markdown("Choose an Excel or CSV file with your data")
-    
+
     if st.session_state.uploaded_filename:
         st.caption(f"📄 Currently loaded file: **{st.session_state.uploaded_filename}**")
-    
+
     col1, col2 = st.columns([2, 1])
     with col1:
         uploaded_file = st.file_uploader(
@@ -421,7 +419,7 @@ if st.session_state.page == "upload":
             type=["xlsx", "xls", "csv", "xlsm"],
             help="Supported formats: Excel (.xlsx, .xls, .xlsm) or CSV"
         )
-    
+
     if uploaded_file is not None:
         try:
             dataset_signature = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
@@ -435,13 +433,13 @@ if st.session_state.page == "upload":
                 df = pd.read_csv(uploaded_file)
             else:
                 df = pd.read_excel(uploaded_file)
-            
+
             st.session_state.df = df
             st.session_state.uploaded_filename = uploaded_file.name
             if dataset_changed:
                 st.rerun()
             st.success(f"✅ Successfully loaded: {uploaded_file.name}")
-            
+
             # Display basic info
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -450,33 +448,33 @@ if st.session_state.page == "upload":
                 st.metric("📋 Total Columns", df.shape[1])
             with col3:
                 st.metric("⚠️ Missing Values", df.isnull().sum().sum())
-            
+
             # Preview
             st.markdown("### Preview of Your Data")
             st.dataframe(df.head(10), use_container_width=True)
-            
+
             st.info("✨ Great! Your data is uploaded. Next step: Rename variables (optional) →")
-            
+
             if st.button("✏️ Rename Variables", type="primary"):
                 set_page("rename")
-            
+
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
             st.info("Try saving your file as CSV or Excel format")
     else:
         st.info("👆 Click above to select your file")
-        
+
         with st.expander("ℹ️ What file should I use?"):
             st.markdown("""
             **Accepted formats:**
             - Excel: .xlsx, .xls
             - Spreadsheet: .csv
-            
+
             **Requirements:**
             - First row: Column names (headers)
             - Data below: Your actual data
             - No blank rows in the middle
-            
+
             **Example:**
             | Product | Score | Temperature |
             |---------|-------|-------------|
@@ -494,9 +492,9 @@ elif st.session_state.page == "rename":
     else:
         st.markdown("## ✏️ Rename Variables")
         st.markdown("Give your columns clearer names — accents, special characters, and any language script are supported")
-        
+
         df = st.session_state.df
-        
+
         st.caption("Type any characters, accents, or language script — e.g. 'Température', '甜み', 'Préférence (n=50)'.")
         rename_table = pd.DataFrame({"Current Name": df.columns, "New Name": df.columns})
         edited_names = st.data_editor(
@@ -509,7 +507,7 @@ elif st.session_state.page == "rename":
             width="stretch",
             key="rename_editor"
         )
-        
+
         if st.button("✅ Apply Renaming", type="primary"):
             new_names = [str(n).strip() for n in edited_names["New Name"]]
             if any(not n for n in new_names):
@@ -517,7 +515,7 @@ elif st.session_state.page == "rename":
             elif len(set(new_names)) != len(new_names):
                 st.error("❌ Column names must be unique.")
             else:
-                rename_map = {old: new for old, new in zip(df.columns, new_names) if old != new}
+                rename_map = {old: new for old, new in zip(df.columns, new_names, strict=False) if old != new}
                 if rename_map:
                     df = df.rename(columns=rename_map)
                     st.session_state.df = df
@@ -538,7 +536,7 @@ elif st.session_state.page == "rename":
                     st.success(f"✅ Renamed {len(rename_map)} column(s)! The new names are used everywhere in the dashboard.")
                 else:
                     st.info("No changes to apply.")
-        
+
         if st.button("➡️ Check Data Quality"):
             set_page("validate")
 
@@ -552,27 +550,27 @@ elif st.session_state.page == "validate":
     else:
         st.markdown("## ✅ Check Data Quality")
         st.markdown("Making sure your data is ready for analysis")
-        
+
         df = st.session_state.df
-        
+
         # Run validation
         validation_result = validate_dataset(df)
         st.session_state.validation_report = validation_result
-        
+
         # Display validation results
         if validation_result['is_valid']:
             st.success("✅ Data validation passed!")
         else:
             st.warning("⚠️ Data has issues that should be reviewed:")
-        
+
         # Validation Report Tabs
         tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Column Info", "Missing Data", "Issues"])
-        
+
         with tab1:
             st.markdown("**Dataset Summary:**")
             report = generate_validation_report(df)
             st.write(report)
-        
+
         with tab2:
             st.markdown("**Column Information:**")
             col_info = pd.DataFrame({
@@ -582,7 +580,7 @@ elif st.session_state.page == "validate":
                 'Unique Values': [df[col].nunique() for col in df.columns]
             })
             st.dataframe(col_info, use_container_width=True)
-        
+
         with tab3:
             st.markdown("**Missing Values Analysis:**")
             missing = df.isnull().sum()
@@ -596,7 +594,7 @@ elif st.session_state.page == "validate":
                 st.dataframe(missing_df, use_container_width=True)
             else:
                 st.success("✅ No missing values!")
-        
+
         with tab4:
             if validation_result['issues']:
                 for issue in validation_result['issues']:
@@ -606,12 +604,12 @@ elif st.session_state.page == "validate":
                         st.warning(issue)
             else:
                 st.success("✅ No data format issues detected!")
-        
+
         # Dependent/Independent variable specification
         st.markdown('<p class="section-text">Specify Variable Roles</p>', unsafe_allow_html=True)
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             independent_vars = st.multiselect(
                 "Select Independent Variables (Features/Predictors):",
@@ -619,7 +617,7 @@ elif st.session_state.page == "validate":
                 key="independent_vars",
                 help="Variables you'll use to predict or explain"
             )
-        
+
         with col2:
             dependent_vars = st.multiselect(
                 "Select Dependent Variables (Target/Response):",
@@ -627,7 +625,7 @@ elif st.session_state.page == "validate":
                 key="dependent_vars",
                 help="Variables you want to predict or analyze"
             )
-        
+
         if dependent_vars and independent_vars:
             st.success("✅ Variable roles configured!")
             if st.button("🤖 Go to Build Predictions"):
@@ -644,9 +642,9 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
     else:
         st.markdown("## 🔍 Explore Your Data")
         st.markdown("Visualize patterns and relationships in your data")
-        
+
         df = st.session_state.df
-        
+
         st.markdown("### Select Variables to Analyze")
         if "eda_independent_selection" not in st.session_state:
             st.session_state.eda_independent_selection = list(
@@ -698,9 +696,9 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
                 on_change=store_eda_dependent_selection,
                 help="Variables you want to predict or analyze"
             )
-        
+
         eda_vars = eda_dependent + [v for v in eda_independent if v not in eda_dependent]
-        
+
         if not eda_vars:
             st.info("👆 Select at least one dependent or independent variable to analyze")
         else:
@@ -731,7 +729,7 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
                         key="chart_font_family"
                     )
                     chart_font_size = st.slider("Font size", 10, 24, 14, key="chart_font_size")
-            
+
             chart_settings = {
                 "template": chart_template,
                 "palette": chart_palette,
@@ -740,15 +738,15 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
                 "font_family": chart_font_family,
                 "font_size": chart_font_size,
             }
-            
+
             st.markdown(f"### {st.session_state.eda_category}")
             st.caption("⭐ marks the chart types recommended for your current variable selection. Each card shows a live preview. Switch categories directly under \"Explore\" in the sidebar.")
-            
+
             show_summary = st.checkbox("📋 Also include Summary Statistics table", value=False, key="include_summary_stats")
-            
+
             recommended = recommend_components(df, eda_vars)
             preview_df = df[eda_vars]
-            
+
             chart_names = list(CHART_CATALOG[st.session_state.eda_category].keys())
             eda_options = ["Summary Statistics"] if show_summary else []
             gallery_cols = st.columns(3)
@@ -772,10 +770,10 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
                         include = st.checkbox("Include", value=is_recommended, key=f"include_{name}")
                         if include:
                             eda_options.append(name)
-            
+
             if st.button("🚀 Generate Analysis", type="primary"):
                 st.session_state.eda_generated = True
-            
+
             # Keep rendering on every rerun (e.g. when a customize color picker changes)
             # instead of only on the exact run the button was clicked.
             if st.session_state.get("eda_generated"):
@@ -804,7 +802,7 @@ elif st.session_state.page in SENSORY_PAGES:
     else:
         st.markdown("## 👃 Sensory Analysis")
         st.markdown("Consumer preferences and sensory evaluation")
-        
+
         run_sensory_page(st.session_state.df, st.session_state.page)
 
 
@@ -817,7 +815,7 @@ elif st.session_state.page == "machine_learning":
     else:
         st.markdown("## 🤖 Build Predictions")
         st.markdown("Train machine learning models to predict outcomes")
-        
+
         if not hasattr(st.session_state, 'dependent_vars') or not hasattr(st.session_state, 'independent_vars'):
             st.warning("⚠️ Please go to 'Check Data Quality' and specify your target and predictor variables first!")
             if st.button("Go to Check Data Quality"):
@@ -835,36 +833,39 @@ elif st.session_state.page == "machine_learning":
 elif st.session_state.page == "recommendations":
     st.markdown("## 💡 Which Model Should I Use?")
     st.markdown("Get expert recommendations based on your data and question")
-    
+
     if st.session_state.df is None:
         st.warning("⚠️ Please upload data first!")
         if st.button("Upload Data"):
             set_page("upload")
     else:
         df = st.session_state.df
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             analysis_type = st.selectbox(
                 "🎯 What are you trying to do?",
                 ["EDA (Explore data)", "Statistical Inference (Test differences)",
-                 "Classification (Predict categories)", "Regression (Predict numbers)", 
+                 "Classification (Predict categories)", "Regression (Predict numbers)",
                  "Sensory Analysis (Consumer preferences)"],
                 format_func=lambda x: x.split("(")[0].strip() if "(" in x else x
             )
-        
+
         with col2:
             st.markdown("**Your data looks like:**")
             has_small = st.checkbox("Small dataset (<100 rows)", value=False)
             has_imbalance = st.checkbox("Imbalanced classes", value=False)
             has_nonlinear = st.checkbox("Complex patterns", value=False)
-        
+
         data_characteristics = []
-        if has_small: data_characteristics.append("Small sample size (<100)")
-        if has_imbalance: data_characteristics.append("Imbalanced classes")
-        if has_nonlinear: data_characteristics.append("Non-linear relationships")
-        
+        if has_small:
+            data_characteristics.append("Small sample size (<100)")
+        if has_imbalance:
+            data_characteristics.append("Imbalanced classes")
+        if has_nonlinear:
+            data_characteristics.append("Non-linear relationships")
+
         if st.button("📌 Get Recommendations", type="primary"):
             # Extract analysis type from the formatted string
             analysis_type_mapping = {
@@ -875,13 +876,13 @@ elif st.session_state.page == "recommendations":
                 "Sensory Analysis (Consumer preferences)": "Sensory Analysis"
             }
             analysis_type_key = analysis_type_mapping.get(analysis_type, analysis_type)
-            
+
             recommendations = recommend_models(
                 analysis_type_key,
                 df,
                 data_characteristics
             )
-            
+
             st.markdown("---")
             st.markdown("### 📊 Top Recommendations:")
             for i, rec in enumerate(recommendations, 1):
@@ -899,14 +900,14 @@ elif st.session_state.page == "help_getting_started":
         "Follow this workflow from preparing your file through selecting and "
         "interpreting an analysis."
     )
-    
+
     with st.expander("How do I prepare my data?", expanded=True):
         st.markdown("""
         Your data should be in a spreadsheet with:
         - **First row:** Column names/headers
         - **Each row:** One observation, participant, sample, or measurement
         - **Each column:** One variable
-        
+
         Example:
         | Product | Taste | Texture | Liking |
         |---------|-------|---------|--------|
@@ -916,7 +917,7 @@ elif st.session_state.page == "help_getting_started":
         Use short, meaningful column names. You can change them later with
         **Prepare Data → Rename Variables**.
         """)
-    
+
     with st.expander("How do I upload and confirm my dataset?"):
         st.markdown("""
         1. Open **Prepare Data → Upload Data**.
@@ -927,7 +928,7 @@ elif st.session_state.page == "help_getting_started":
 
         Google Sheets should be exported as CSV first. PDF files are not supported.
         """)
-    
+
     with st.expander("What should I check before analysis?"):
         st.markdown("""
         Open **Prepare Data → Check Data Quality** to:
@@ -939,7 +940,7 @@ elif st.session_state.page == "help_getting_started":
         Missing values are allowed. Analyses remove missing observations where
         necessary, and the dashboard warns when too little valid data remains.
         """)
-    
+
     with st.expander("What is the recommended workflow?"):
         st.markdown("""
         1. **Upload Data** and confirm the file status.
@@ -969,7 +970,7 @@ elif st.session_state.page == "help_getting_started":
 elif st.session_state.page == "help_analysis_types":
     st.markdown("## ❓ Help: Analysis Types")
     st.write("Choose a section based on the question you want to answer.")
-    
+
     with st.expander("🔍 Explore Data", expanded=True):
         st.markdown("""
         Use Explore Data to describe patterns before formal inference:
@@ -982,7 +983,7 @@ elif st.session_state.page == "help_analysis_types":
         Recommended chart cards are marked with ⭐. Variable selections are preserved
         across categories, and chart options refresh automatically.
         """)
-    
+
     with st.expander("📐 Assumption Checks and Suggested Analysis"):
         st.markdown("""
         **Test Distribution** offers Automatic, Shapiro-Wilk,
@@ -1029,7 +1030,7 @@ elif st.session_state.page == "help_analysis_types":
         - **Linear regression:** Predict a numeric outcome from a numeric predictor
         - **Chi-square:** Association between two categorical variables
         """)
-    
+
     with st.expander("👃 Sensory Analysis"):
         st.markdown("""
         - **Discrimination Tests:** Triangle, paired comparison, duo-trio,
@@ -1050,7 +1051,7 @@ elif st.session_state.page == "help_analysis_types":
         Pages explain the required data structure and validate the selected fields
         before running an analysis.
         """)
-    
+
     with st.expander("🤖 Advanced Analysis"):
         st.markdown("""
         - **Build Predictions:** Train classification or regression models using

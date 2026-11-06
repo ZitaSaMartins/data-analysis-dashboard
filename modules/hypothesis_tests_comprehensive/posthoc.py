@@ -118,7 +118,7 @@ def _run_pairwise_comparisons(
         tukey = pairwise_tukeyhsd(values, groups, alpha=ALPHA)
         pair_indices = tukey._multicomp.pairindices
         for index, (first_index, second_index) in enumerate(
-            zip(pair_indices[0], pair_indices[1])
+            zip(pair_indices[0], pair_indices[1], strict=False)
         ):
             first = str(tukey._multicomp.groupsunique[first_index])
             second = str(tukey._multicomp.groupsunique[second_index])
@@ -185,7 +185,7 @@ def _run_pairwise_comparisons(
             )[1]
         else:
             p_values = np.asarray(raw_p_values)
-        for (first, second, difference), p_value in zip(pair_metadata, p_values):
+        for (first, second, difference), p_value in zip(pair_metadata, p_values, strict=False):
             significant = bool(p_value <= ALPHA)
             pair_rows.append(
                 {
@@ -214,7 +214,7 @@ def _run_pairwise_comparisons(
                 raw_p_values.append(float(raw_p))
                 pair_metadata.append((first, second, difference))
         adjusted = multipletests(raw_p_values, alpha=ALPHA, method="holm")[1]
-        for (first, second, difference), adjusted_p in zip(pair_metadata, adjusted):
+        for (first, second, difference), adjusted_p in zip(pair_metadata, adjusted, strict=False):
             significant = bool(adjusted_p <= ALPHA)
             pair_rows.append(
                 {
@@ -304,7 +304,7 @@ def _run_pairwise_comparisons(
                     )
                 )
         adjusted = multipletests(raw_p_values, alpha=ALPHA, method="holm")[1]
-        for (first, second, difference), adjusted_p in zip(pair_metadata, adjusted):
+        for (first, second, difference), adjusted_p in zip(pair_metadata, adjusted, strict=False):
             significant = bool(adjusted_p <= ALPHA)
             pair_rows.append(
                 {

@@ -1,6 +1,5 @@
 """Combines distribution and variance results into inference-test recommendations."""
 
-import numpy as np
 import pandas as pd
 import streamlit as st
 from scipy import stats

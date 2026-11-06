@@ -1,0 +1,27 @@
+[tool.ruff]
+# 200 accommodates the long, intentionally single-line data/config dict
+# literals scattered through this codebase (chart catalogs, sensory product
+# profiles, etc.) without having to reformat them.
+line-length = 200
+exclude = [".venv", "synthetic_test_data", "sample_data.csv"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.bandit]
+exclude_dirs = [".venv", "tests", "synthetic_test_data", "__pycache__"]
+skips = [
+    "B101",  # assert_used - fine in tests and defensive sanity checks
+    "B311",  # random - numpy RNG used for statistical bootstrap resampling, not crypto/secrets
+]

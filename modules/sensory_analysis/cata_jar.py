@@ -30,7 +30,7 @@ def _cata(df: pd.DataFrame) -> None:
     product = st.selectbox("Product", [c for c in columns if c != consumer], key="cata_product")
     candidates = [
         c for c in binary_eligible if c not in {consumer, product}
-        and set(df[c].dropna().unique()).issubset({0, 1, False, True})
+        and set(df[c].dropna().unique()).issubset({0, 1})
     ]
     attributes = st.multiselect("Binary CATA attributes", candidates, default=candidates[:8], key="cata_attr")
     if not _need(bool(attributes), "Select binary 0/1 attribute columns."):
@@ -120,7 +120,7 @@ def _cata(df: pd.DataFrame) -> None:
         adjusted = multipletests(raw_p_values, alpha=0.05, method="holm")[1]
         significant_pairs = {
             tuple(sorted((first, second)))
-            for (first, second, _), adjusted_p in zip(metadata, adjusted)
+            for (first, second, _), adjusted_p in zip(metadata, adjusted, strict=False)
             if adjusted_p < 0.05
         }
         pairwise_rows.extend(
@@ -132,7 +132,7 @@ def _cata(df: pd.DataFrame) -> None:
                 "Adjusted p-value": adjusted_p,
                 "Significant (5%)": adjusted_p < 0.05,
             }
-            for (first, second, difference), adjusted_p in zip(metadata, adjusted)
+            for (first, second, difference), adjusted_p in zip(metadata, adjusted, strict=False)
         )
         labels = [str(column) for column in paired.columns]
         letters = _compact_letters(labels, significant_pairs)
@@ -144,7 +144,7 @@ def _cata(df: pd.DataFrame) -> None:
                 "Checked (%)": float(rates.loc[column]),
                 "Grouping letters": letters[label],
             }
-            for label, column in zip(labels, paired.columns)
+            for label, column in zip(labels, paired.columns, strict=False)
         )
     if pairwise_rows:
         st.subheader("Holm-adjusted pairwise McNemar comparisons")
@@ -283,10 +283,10 @@ def _cata_correspondence(data: pd.DataFrame, product: str, attributes: Sequence[
 
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.scatter(row_coords["Dim1"], row_coords["Dim2"], color="#4c78a8", s=90, label="Products")
-    for label, x_value, y_value in zip(row_coords.index, row_coords["Dim1"], row_coords["Dim2"]):
+    for label, x_value, y_value in zip(row_coords.index, row_coords["Dim1"], row_coords["Dim2"], strict=False):
         ax.annotate(str(label), (x_value, y_value), xytext=(5, 5), textcoords="offset points", fontweight="bold")
     ax.scatter(col_coords["Dim1"], col_coords["Dim2"], color="#e45756", marker="^", s=70, label="Attributes")
-    for label, x_value, y_value in zip(col_coords.index, col_coords["Dim1"], col_coords["Dim2"]):
+    for label, x_value, y_value in zip(col_coords.index, col_coords["Dim1"], col_coords["Dim2"], strict=False):
         ax.annotate(str(label), (x_value, y_value), xytext=(5, 5), textcoords="offset points", color="#e45756")
     ax.axhline(0, color="grey", linewidth=0.7)
     ax.axvline(0, color="grey", linewidth=0.7)

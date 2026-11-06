@@ -74,34 +74,34 @@ def test_mannwhitney(df: pd.DataFrame):
     """Mann-Whitney U test (non-parametric alternative to t-test)."""
     st.markdown("### Mann-Whitney U Test")
     st.caption("Non-parametric alternative to t-test. Use when data is not normally distributed.")
-    
+
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-    
+
     if not numeric_cols or not cat_cols:
         st.error("Need both numeric and categorical columns.")
         return
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         numeric_var = st.selectbox("Numeric variable:", numeric_cols, key="mw_numeric")
-    
+
     with col2:
         grouping_var = st.selectbox("Grouping variable:", cat_cols, key="mw_cat")
-    
+
     if st.button("Run Mann-Whitney U test"):
         groups = df[grouping_var].unique()
         groups = [g for g in groups if pd.notna(g)][:2]
-        
+
         data1 = df[df[grouping_var] == groups[0]][numeric_var].dropna()
         data2 = df[df[grouping_var] == groups[1]][numeric_var].dropna()
-        
+
         u_stat, p_value = stats.mannwhitneyu(data1, data2)
-        
+
         st.markdown(f"**U-statistic:** {u_stat:.3f}")
         st.markdown(f"**p-value:** {p_value:.4f}")
-        
+
         alpha = 0.05
         if p_value < alpha:
             st.success(f"✅ **Significant difference** (p < {alpha})")
@@ -113,38 +113,38 @@ def test_chi_square(df: pd.DataFrame):
     """Chi-square test for categorical variables."""
     st.markdown("### Chi-Square Test")
     st.caption("Tests association between two categorical variables.")
-    
+
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-    
+
     if len(cat_cols) < 2:
         st.error("Need at least 2 categorical columns.")
         return
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         var1 = st.selectbox("First categorical variable:", cat_cols)
-    
+
     with col2:
         var2 = st.selectbox("Second categorical variable:", [v for v in cat_cols if v != var1])
-    
+
     if st.button("Run Chi-Square test"):
         # Create contingency table
         contingency = pd.crosstab(df[var1], df[var2])
-        
+
         # Perform chi-square test
         chi2, p_value, dof, expected = stats.chi2_contingency(contingency)
-        
+
         st.markdown(f"**Chi-square statistic:** {chi2:.3f}")
         st.markdown(f"**p-value:** {p_value:.4f}")
         st.markdown(f"**Degrees of freedom:** {dof}")
-        
+
         alpha = 0.05
         if p_value < alpha:
             st.success(f"✅ **Significant association** (p < {alpha})")
         else:
             st.info(f"❌ **No significant association** (p ≥ {alpha})")
-        
+
         # Display contingency table
         st.markdown("**Contingency Table:**")
         st.dataframe(contingency, use_container_width=True)

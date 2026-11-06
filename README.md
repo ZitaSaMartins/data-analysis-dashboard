@@ -138,6 +138,30 @@ streamlit run app.py
 
 The app will open at `http://localhost:8501`
 
+## Development
+
+Install the extra dev tooling (linting, security scanning, tests) alongside
+the app's own dependencies:
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+```
+
+Run everything locally the same way CI does:
+```bash
+ruff check .                      # lint
+bandit -r . -c pyproject.toml     # security scan
+pip-audit -r requirements.txt     # dependency vulnerability scan
+pytest tests -v                   # tests
+```
+
+These also run automatically on every push and pull request via
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml). Tests live in
+`tests/` and currently cover the pure, non-Streamlit-coupled modules
+(`data_validation`, `model_recommender`, `eda/catalog`,
+`sensory_analysis/_cata_math`, and `scripts/generate_sample_data`) — the
+Streamlit page functions in `app.py` and the various `modules/*` pages are UI
+glue and aren't unit-tested directly.
+
 ## Deployment on Streamlit Cloud (Free!)
 
 ### Step 1: Push to GitHub
@@ -388,7 +412,8 @@ navigation button in `modules/sidebar_navigation/main_nav.py`.
 Want to improve this dashboard? 
 1. Fork the repo
 2. Create a feature branch
-3. Submit a pull request
+3. Run `ruff check .`, `bandit -r . -c pyproject.toml`, and `pytest tests -v` locally (see [Development](#development))
+4. Submit a pull request
 
 Suggestions:
 - Additional statistical tests

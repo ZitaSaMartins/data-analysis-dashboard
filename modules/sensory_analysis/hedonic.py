@@ -52,7 +52,7 @@ def _hedonic(df: pd.DataFrame) -> None:
         labels = np.concatenate([[name] * len(group) for name, group in grouped.items()])
         tukey = pairwise_tukeyhsd(values, labels, alpha=0.05)
         first_indices, second_indices = tukey._multicomp.pairindices
-        for index, (first_index, second_index) in enumerate(zip(first_indices, second_indices)):
+        for index, (first_index, second_index) in enumerate(zip(first_indices, second_indices, strict=False)):
             first = str(tukey._multicomp.groupsunique[first_index])
             second = str(tukey._multicomp.groupsunique[second_index])
             significant = bool(tukey.reject[index])
@@ -84,7 +84,7 @@ def _hedonic(df: pd.DataFrame) -> None:
                 raw_p_values.append(float(pair_p))
                 metadata.append((str(first), str(second), float(difference.mean())))
         adjusted = multipletests(raw_p_values, alpha=0.05, method="holm")[1]
-        for (first, second, difference), adjusted_p in zip(metadata, adjusted):
+        for (first, second, difference), adjusted_p in zip(metadata, adjusted, strict=False):
             significant = bool(adjusted_p < 0.05)
             pairwise_rows.append(
                 {
