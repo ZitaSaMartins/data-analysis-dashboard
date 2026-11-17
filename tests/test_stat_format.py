@@ -2,8 +2,16 @@
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    DEFAULT_SIGNIFICANCE_LEVEL,
+    format_alpha,
+    format_alpha_percent,
+    format_p_value,
+    get_significance_level,
+    with_formatted_p_values,
+)
 
 
 def test_format_p_value_below_floor_shows_less_than_threshold():
@@ -54,3 +62,26 @@ def test_with_formatted_p_values_handles_none_entries():
     df = pd.DataFrame({"p-value": [0.01, None]})
     formatted = with_formatted_p_values(df, ["p-value"])
     assert list(formatted["p-value"]) == ["0.0100", "—"]
+
+
+def test_get_significance_level_defaults_to_five_percent():
+    st.session_state.clear()
+    assert get_significance_level() == DEFAULT_SIGNIFICANCE_LEVEL
+
+
+def test_get_significance_level_reads_stored_session_value():
+    st.session_state.clear()
+    st.session_state["significance_level"] = 0.1
+    assert get_significance_level() == 0.1
+
+
+def test_format_alpha_formats_as_plain_decimal():
+    assert format_alpha(0.05) == "0.05"
+    assert format_alpha(0.01) == "0.01"
+    assert format_alpha(0.073) == "0.073"
+
+
+def test_format_alpha_percent_formats_as_percentage():
+    assert format_alpha_percent(0.05) == "5%"
+    assert format_alpha_percent(0.01) == "1%"
+    assert format_alpha_percent(0.073) == "7.3%"

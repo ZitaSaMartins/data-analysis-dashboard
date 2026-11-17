@@ -12,7 +12,7 @@ import streamlit as st
 from scipy import stats
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
-from modules.stat_format import format_p_value
+from modules.stat_format import format_alpha_percent, format_p_value
 
 
 def _columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
@@ -45,10 +45,10 @@ def _frame(df: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
     return df.loc[:, list(columns)].dropna().copy()
 
 
-def _interpret_p(p_value: float, subject: str = "products") -> None:
+def _interpret_p(p_value: float, alpha: float, subject: str = "products") -> None:
     if not np.isfinite(p_value):
         st.error("The test produced an invalid (non-finite) p-value. Check the selected data.")
-    elif p_value < 0.05:
+    elif p_value < alpha:
         st.success(f"Evidence of differences among {subject} (p={format_p_value(p_value)}).")
     else:
         st.info(f"No statistically significant difference among {subject} (p={format_p_value(p_value)}).")
@@ -129,7 +129,12 @@ def _scatter_labels(
     plt.close(fig)
 
 
-def _product_tests(data: pd.DataFrame, product: str, attributes: Sequence[str]) -> pd.DataFrame:
+def _product_tests(
+    data: pd.DataFrame,
+    product: str,
+    attributes: Sequence[str],
+    alpha: float,
+) -> pd.DataFrame:
     rows: list[dict[str, float | str | int]] = []
     for attribute in attributes:
         groups = [
@@ -145,7 +150,7 @@ def _product_tests(data: pd.DataFrame, product: str, attributes: Sequence[str]) 
                 "Attribute": attribute,
                 "F": float(statistic),
                 "p-value": float(p_value),
-                "Significant (5%)": "Yes" if p_value < 0.05 else "No",
+                f"Significant ({format_alpha_percent(alpha)})": "Yes" if p_value < alpha else "No",
                 "Groups": len(groups),
             }
         )
@@ -156,6 +161,7 @@ def _product_grouping_letters(
     data: pd.DataFrame,
     product: str,
     attributes: Sequence[str],
+    alpha: float,
 ) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for attribute in attributes:
@@ -166,7 +172,7 @@ def _product_grouping_letters(
         if clean[product].nunique() < 2:
             continue
         labels = clean[product].astype(str).to_numpy()
-        tukey = pairwise_tukeyhsd(clean[attribute].to_numpy(), labels, alpha=0.05)
+        tukey = pairwise_tukeyhsd(clean[attribute].to_numpy(), labels, alpha=alpha)
         first_indices, second_indices = tukey._multicomp.pairindices
         significant_pairs: set[tuple[str, str]] = set()
         for index, (first_index, second_index) in enumerate(zip(first_indices, second_indices, strict=False)):

@@ -4,9 +4,7 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
-from modules.stat_format import format_p_value
-
-from ._shared import ALPHA
+from modules.stat_format import format_p_value, select_significance_level
 
 
 def _inference_recommendations(
@@ -121,6 +119,7 @@ def _within_group_normality(
     df: pd.DataFrame,
     variable: str,
     grouping_variable: str,
+    alpha: float,
 ) -> tuple[bool | None, str]:
     """Check normality separately within each comparison group.
 
@@ -150,7 +149,7 @@ def _within_group_normality(
         else:
             _, p_value = stats.normaltest(values)
             test_name = "D'Agostino-Pearson K²"
-        supports_normality = p_value > ALPHA
+        supports_normality = p_value > alpha
         if not supports_normality:
             all_normal = False
         group_reports.append(
@@ -197,6 +196,14 @@ def show_suggested_analysis(df: pd.DataFrame) -> None:
             "The same selection will be used by both pages and by Suggested Analysis."
         )
         return
+
+    alpha = select_significance_level()
+    st.caption(
+        "The within-group normality check below always uses the significance level "
+        "selected here. The cached Test Distribution and Test Variance results keep "
+        "whichever significance level was selected when 'Run Tests' was last clicked "
+        "on those pages — re-run them if you want those checks at the current level."
+    )
 
     current_selection = st.session_state.get("_suggested_analysis_variables")
     if current_selection is None:
@@ -286,7 +293,7 @@ def show_suggested_analysis(df: pd.DataFrame) -> None:
             continue
 
         is_normal, normality_reason = _within_group_normality(
-            df, variable, grouping_variable
+            df, variable, grouping_variable, alpha
         )
         if is_normal is None:
             summary_rows.append({

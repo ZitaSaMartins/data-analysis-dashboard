@@ -8,9 +8,15 @@ import streamlit as st
 from plotly.subplots import make_subplots
 from scipy import stats
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_alpha,
+    format_alpha_percent,
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
-from ._shared import ALPHA, _require_numeric, _select_assumption_variables
+from ._shared import _require_numeric, _select_assumption_variables
 
 
 def _suggest_normality_test(sample_size: int) -> tuple[str, str]:
@@ -153,6 +159,7 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
         key="comprehensive_distribution_test",
     )
     selected_test = test_options[selected_test_label]
+    alpha = select_significance_level()
 
     guidance = []
     for column in selected_columns:
@@ -217,6 +224,7 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
                 test_to_run = "shapiro" if sample_size < 50 else "dagostino"
 
             critical_value: float | None = None
+            anderson_level_percent: float | None = None
             if test_to_run == "shapiro":
                 tested_values = (
                     values.sample(5000, random_state=0)
@@ -244,11 +252,14 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
             elif test_to_run == "anderson":
                 anderson_result = stats.anderson(values, dist="norm")
                 statistic = float(anderson_result.statistic)
-                five_percent_index = int(
-                    np.argmin(np.abs(anderson_result.significance_level - 5.0))
+                closest_index = int(
+                    np.argmin(np.abs(anderson_result.significance_level - alpha * 100))
                 )
                 critical_value = float(
-                    anderson_result.critical_values[five_percent_index]
+                    anderson_result.critical_values[closest_index]
+                )
+                anderson_level_percent = float(
+                    anderson_result.significance_level[closest_index]
                 )
                 p_value = None
                 test_name = "Anderson-Darling"
@@ -267,16 +278,16 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
                 reason = (
                     f"statistic {statistic:.4f} "
                     f"{'<' if supports_normality else '≥'} "
-                    f"5% critical value {critical_value:.4f}"
+                    f"{anderson_level_percent:g}% critical value {critical_value:.4f}"
                 )
             else:
                 if not np.isfinite(p_value):
                     st.warning(f"'{column}' produced an invalid p-value and was skipped.")
                     continue
-                supports_normality = p_value > ALPHA
+                supports_normality = p_value > alpha
                 reason = (
                     f"p = {format_p_value(p_value)} "
-                    f"{'>' if supports_normality else '≤'} {ALPHA}"
+                    f"{'>' if supports_normality else '≤'} {format_alpha(alpha)}"
                 )
 
             results.append({
@@ -285,7 +296,7 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
                 "Test": test_name,
                 "Statistic": statistic,
                 "p-value": p_value,
-                "5% critical value": critical_value,
+                "Critical value": critical_value,
                 "Interpretation": (
                     "Consistent with normality ✅"
                     if supports_normality
@@ -304,7 +315,7 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
             return
         st.session_state.distribution_test_result = {
             "variables": saved_results,
-            "alpha": ALPHA,
+            "alpha": alpha,
         }
         result_df = pd.DataFrame(results)
         st.dataframe(
@@ -313,13 +324,15 @@ def run_distribution_tests(df: pd.DataFrame) -> None:
             width="stretch",
             column_config={
                 "Statistic": st.column_config.NumberColumn(format="%.4f"),
-                "5% critical value": st.column_config.NumberColumn(format="%.4f"),
+                "Critical value": st.column_config.NumberColumn(format="%.4f"),
             },
         )
         st.caption(
-            "Interpretation: p > 0.05 means the test did not find significant "
-            "evidence against normality. For Anderson-Darling, the statistic must "
-            "be below the 5% critical value. Neither result proves perfect normality."
+            f"Interpretation: p > {format_alpha(alpha)} means the test did not find "
+            "significant evidence against normality. For Anderson-Darling, the "
+            "statistic must be below the critical value for the closest significance "
+            "level scipy provides to the selected α "
+            f"({format_alpha_percent(alpha)}). Neither result proves perfect normality."
         )
 
         st.markdown("### 👁️ Visual Distribution Checks")

@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
-from modules.stat_format import format_p_value
+from modules.stat_format import format_p_value, select_significance_level
 
 from ._shared import (
     _paired_columns,
@@ -25,6 +25,7 @@ def test_mannwhitney(df: pd.DataFrame) -> None:
     if inputs is None:
         return
     variable, grouping_variable, group_1, group_2 = inputs
+    alpha = select_significance_level()
     if st.button("Run Mann-Whitney U", type="primary", key="run_mannwhitney"):
         values_1 = df.loc[
             df[grouping_variable] == group_1, variable
@@ -45,6 +46,7 @@ def test_mannwhitney(df: pd.DataFrame) -> None:
             p_value,
             "The group distributions are significantly different",
             "No significant group-distribution difference was detected",
+            alpha,
         )
 
 
@@ -63,6 +65,7 @@ def test_wilcoxon(df: pd.DataFrame) -> None:
         if columns is None:
             return
         first, second = columns
+        alpha = select_significance_level()
         if st.button("Run Wilcoxon Test", type="primary", key="run_wilcoxon_paired"):
             paired = df[[first, second]].dropna().astype(float)
             differences = paired[first] - paired[second]
@@ -75,6 +78,7 @@ def test_wilcoxon(df: pd.DataFrame) -> None:
                 p_value,
                 "The paired measurements are significantly different",
                 "No significant paired difference was detected",
+                alpha,
             )
     else:
         numeric_columns = _require_numeric(df)
@@ -90,6 +94,7 @@ def test_wilcoxon(df: pd.DataFrame) -> None:
             value=0.0,
             key="wilcoxon_reference",
         )
+        alpha = select_significance_level()
         if st.button(
             "Run Wilcoxon Test",
             type="primary",
@@ -105,6 +110,7 @@ def test_wilcoxon(df: pd.DataFrame) -> None:
                 p_value,
                 "The sample differs significantly from the reference",
                 "No significant difference from the reference was detected",
+                alpha,
             )
 
 
@@ -128,6 +134,7 @@ def test_kruskal_wallis(df: pd.DataFrame) -> None:
         key="kruskal_group",
     )
     pairwise_method = _show_pairwise_options("nonparametric", "kruskal")
+    alpha = select_significance_level()
     if st.button("Run Kruskal-Wallis", type="primary", key="run_kruskal"):
         if not selected_variables:
             st.error("Select at least one numeric outcome variable.")
@@ -157,8 +164,9 @@ def test_kruskal_wallis(df: pd.DataFrame) -> None:
                 p_value,
                 "At least one group distribution is significantly different",
                 "No significant difference among group distributions was detected",
+                alpha,
             )
-            _display_pairwise_results(grouped_values, pairwise_method, "Median")
+            _display_pairwise_results(grouped_values, pairwise_method, "Median", alpha)
 
 
 def test_friedman(df: pd.DataFrame) -> None:
@@ -177,6 +185,7 @@ def test_friedman(df: pd.DataFrame) -> None:
     if len(selected_columns) < 3:
         st.info("Select at least three related measurements.")
         return
+    alpha = select_significance_level()
     if st.button("Run Friedman Test", type="primary", key="run_friedman"):
         complete = df[selected_columns].dropna().astype(float)
         if len(complete) < 2:
@@ -190,6 +199,7 @@ def test_friedman(df: pd.DataFrame) -> None:
             p_value,
             "At least one related measurement is significantly different",
             "No significant difference among related measurements was detected",
+            alpha,
         )
 
 
@@ -213,6 +223,7 @@ def test_mood_median(df: pd.DataFrame) -> None:
         key="mood_group",
     )
     pairwise_method = _show_pairwise_options("nonparametric", "mood")
+    alpha = select_significance_level()
     if st.button("Run Mood's Median Test", type="primary", key="run_mood"):
         if not selected_variables:
             st.error("Select at least one numeric outcome variable.")
@@ -246,6 +257,7 @@ def test_mood_median(df: pd.DataFrame) -> None:
                 p_value,
                 "The group medians are significantly different",
                 "No significant difference among group medians was detected",
+                alpha,
             )
-            _display_pairwise_results(grouped_values, pairwise_method, "Median")
+            _display_pairwise_results(grouped_values, pairwise_method, "Median", alpha)
 

@@ -10,10 +10,13 @@ from scipy import stats
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import AnovaRM
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
 from ._shared import (
-    ALPHA,
     _paired_columns,
     _require_categorical,
     _require_numeric,
@@ -41,6 +44,7 @@ def test_one_sample_ttest(df: pd.DataFrame) -> None:
         value=0.0,
         key="one_sample_t_reference",
     )
+    alpha = select_significance_level()
     if st.button("Run One-Sample t-Test", type="primary", key="run_one_sample_t"):
         values = df[variable].dropna().astype(float)
         if len(values) < 2:
@@ -53,6 +57,7 @@ def test_one_sample_ttest(df: pd.DataFrame) -> None:
             p_value,
             "The sample mean is significantly different from the reference mean",
             "No significant difference from the reference mean was detected",
+            alpha,
         )
 
 
@@ -69,6 +74,7 @@ def test_independent_ttest(df: pd.DataFrame) -> None:
         value=True,
         key="independent_t_equal_variance",
     )
+    alpha = select_significance_level()
 
     if st.button(
         "Run Independent t-Test",
@@ -109,6 +115,7 @@ def test_independent_ttest(df: pd.DataFrame) -> None:
             p_value,
             "The group means are significantly different",
             "No significant difference between group means was detected",
+            alpha,
         )
 
 
@@ -120,6 +127,7 @@ def test_paired_ttest(df: pd.DataFrame) -> None:
     if columns is None:
         return
     first, second = columns
+    alpha = select_significance_level()
     if st.button("Run Paired t-Test", type="primary", key="run_paired_t"):
         paired = df[[first, second]].dropna().astype(float)
         if len(paired) < 2:
@@ -132,6 +140,7 @@ def test_paired_ttest(df: pd.DataFrame) -> None:
             p_value,
             "The paired measurements are significantly different",
             "No significant paired difference was detected",
+            alpha,
         )
 
 
@@ -155,6 +164,7 @@ def test_anova(df: pd.DataFrame) -> None:
         key="anova_group",
     )
     pairwise_method = _show_pairwise_options("anova", "anova")
+    alpha = select_significance_level()
     if st.button("Run One-Way ANOVA", type="primary", key="run_anova"):
         if not selected_variables:
             st.error("Select at least one numeric outcome variable.")
@@ -190,8 +200,9 @@ def test_anova(df: pd.DataFrame) -> None:
                 p_value,
                 "At least one group mean is significantly different",
                 "No significant difference among group means was detected",
+                alpha,
             )
-            _display_pairwise_results(grouped_values, pairwise_method, "Mean")
+            _display_pairwise_results(grouped_values, pairwise_method, "Mean", alpha)
 
 
 def _fit_two_way_anova(
@@ -336,6 +347,7 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
         "every factor combination. For repeated or matched participants, use a "
         "repeated-measures or mixed-design method instead."
     )
+    alpha = select_significance_level()
 
     if st.button(
         "Run Two-Way ANOVA",
@@ -440,13 +452,13 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
                     "Partial η²",
                     f"{result['Partial eta squared']:.4f}",
                 )
-                if result["p-value"] <= ALPHA:
+                if result["p-value"] <= alpha:
                     st.success("Significant effect detected")
                 else:
                     st.info("No significant effect detected")
 
         interaction_result = result_rows[2]
-        if interaction_result["p-value"] <= ALPHA:
+        if interaction_result["p-value"] <= alpha:
             st.warning(
                 "The interaction is significant. Interpret each main effect "
                 "cautiously because one factor's effect changes across levels of "
@@ -482,9 +494,9 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
             "Equal cell variance (Levene p)",
             format_p_value(levene_p),
         )
-        if shapiro_p <= ALPHA:
+        if shapiro_p <= alpha:
             st.warning("Residuals show significant evidence against normality.")
-        if levene_p <= ALPHA:
+        if levene_p <= alpha:
             st.warning("Cell variances differ significantly.")
 
         means = (
@@ -560,6 +572,7 @@ def test_repeated_anova(df: pd.DataFrame) -> None:
         condition_options,
         key="repeated_anova_condition",
     )
+    alpha = select_significance_level()
     if st.button(
         "Run Repeated Measures ANOVA",
         type="primary",
@@ -592,5 +605,6 @@ def test_repeated_anova(df: pd.DataFrame) -> None:
             p_value,
             "The repeated conditions differ significantly",
             "No significant repeated-condition difference was detected",
+            alpha,
         )
 

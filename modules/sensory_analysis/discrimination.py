@@ -9,7 +9,13 @@ import streamlit as st
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_alpha,
+    format_alpha_percent,
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
 from ._shared import _columns, _compact_letters, _interpret_p, _need
 
@@ -36,6 +42,7 @@ def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> Non
         correct_value = values[0] if marks_correct == "Yes" else object()
     else:
         correct_value = st.selectbox("Value meaning correct", values, key=f"{key}_correct")
+    alpha = select_significance_level()
     valid = df[outcome].notna()
     successes = int((df.loc[valid, outcome] == correct_value).sum())
     total = int(valid.sum())
@@ -44,7 +51,7 @@ def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> Non
         (
             count
             for count in range(total + 1)
-            if stats.binomtest(count, total, chance, alternative="greater").pvalue < 0.05
+            if stats.binomtest(count, total, chance, alternative="greater").pvalue < alpha
         ),
         total + 1,
     )
@@ -59,7 +66,7 @@ def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> Non
                     "Total": [total],
                     "Observed proportion": [successes / total],
                     "Chance proportion": [chance],
-                    "Critical correct (α=0.05)": [critical_display],
+                    f"Critical correct (α={format_alpha(alpha)})": [critical_display],
                     "Exact p-value": [result.pvalue],
                     "95% CI low": [result.proportion_ci().low],
                     "95% CI high": [result.proportion_ci().high],
@@ -74,7 +81,7 @@ def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> Non
     ax.set(ylim=(0, 1), ylabel="Correct response proportion", title=name)
     st.pyplot(fig)
     plt.close(fig)
-    if result.pvalue < 0.05:
+    if result.pvalue < alpha:
         st.success("The panel discriminated above chance.")
     else:
         st.info("The observed correct rate is not convincingly above chance.")
@@ -93,13 +100,14 @@ def _ranking(df: pd.DataFrame) -> None:
     if not _need(bool(rank_candidates), "Select Assessor/Product columns that leave a numeric Rank column available."):
         return
     rank = st.selectbox("Rank", rank_candidates, key="rank_value")
+    alpha = select_significance_level()
     pivot = df.pivot_table(index=assessor, columns=product, values=rank, aggfunc="mean").dropna()
     if not _need(pivot.shape[0] >= 2 and pivot.shape[1] >= 3, "Need at least 2 complete assessors and 3 products."):
         return
     statistic, p_value = stats.friedmanchisquare(*(pivot[column] for column in pivot))
     summary = pd.DataFrame({"Mean rank": pivot.mean(), "Median rank": pivot.median()}).sort_values("Mean rank")
     st.write(f"Friedman χ²({pivot.shape[1] - 1}) = **{statistic:.3f}**, p = **{format_p_value(p_value)}**")
-    _interpret_p(float(p_value))
+    _interpret_p(float(p_value), alpha)
 
     pair_metadata: list[tuple[str, str, float, float]] = []
     raw_p_values: list[float] = []
@@ -115,11 +123,11 @@ def _ranking(df: pd.DataFrame) -> None:
             pair_metadata.append(
                 (str(first), str(second), float(pair_statistic), float(difference.mean()))
             )
-    adjusted = multipletests(raw_p_values, alpha=0.05, method="holm")[1]
+    adjusted = multipletests(raw_p_values, alpha=alpha, method="holm")[1]
     significant_pairs = {
         tuple(sorted((first, second)))
         for (first, second, _, _), adjusted_p in zip(pair_metadata, adjusted, strict=False)
-        if adjusted_p < 0.05
+        if adjusted_p < alpha
     }
     letters = _compact_letters(products, significant_pairs)
     summary["Grouping letters"] = [letters[str(product_name)] for product_name in summary.index]
@@ -134,7 +142,7 @@ def _ranking(df: pd.DataFrame) -> None:
                         "W": pair_statistic,
                         "Mean rank difference": mean_difference,
                         "Adjusted p-value": adjusted_p,
-                        "Significant (5%)": adjusted_p < 0.05,
+                        f"Significant ({format_alpha_percent(alpha)})": adjusted_p < alpha,
                     }
                     for (first, second, pair_statistic, mean_difference), adjusted_p in zip(
                         pair_metadata, adjusted, strict=False

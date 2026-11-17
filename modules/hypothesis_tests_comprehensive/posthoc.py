@@ -7,9 +7,7 @@ from scipy import stats
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multitest import multipletests
 
-from modules.stat_format import with_formatted_p_values
-
-from ._shared import ALPHA
+from modules.stat_format import format_alpha, with_formatted_p_values
 
 
 def _compact_letter_display(
@@ -106,6 +104,7 @@ def _compact_letter_display(
 def _run_pairwise_comparisons(
     grouped_values: dict[str, pd.Series],
     method: str,
+    alpha: float,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
     """Run a selected post-hoc method and return pairwise results and letters."""
     labels = list(grouped_values)
@@ -117,7 +116,7 @@ def _run_pairwise_comparisons(
         groups = np.concatenate(
             [[label] * len(grouped_values[label]) for label in labels]
         )
-        tukey = pairwise_tukeyhsd(values, groups, alpha=ALPHA)
+        tukey = pairwise_tukeyhsd(values, groups, alpha=alpha)
         pair_indices = tukey._multicomp.pairindices
         for index, (first_index, second_index) in enumerate(
             zip(pair_indices[0], pair_indices[1], strict=False)
@@ -182,13 +181,13 @@ def _run_pairwise_comparisons(
         if method == "bonferroni":
             p_values = multipletests(
                 raw_p_values,
-                alpha=ALPHA,
+                alpha=alpha,
                 method="bonferroni",
             )[1]
         else:
             p_values = np.asarray(raw_p_values)
         for (first, second, difference), p_value in zip(pair_metadata, p_values, strict=False):
-            significant = bool(p_value <= ALPHA)
+            significant = bool(p_value <= alpha)
             pair_rows.append(
                 {
                     "Group 1": first,
@@ -215,9 +214,9 @@ def _run_pairwise_comparisons(
                 )
                 raw_p_values.append(float(raw_p))
                 pair_metadata.append((first, second, difference))
-        adjusted = multipletests(raw_p_values, alpha=ALPHA, method="holm")[1]
+        adjusted = multipletests(raw_p_values, alpha=alpha, method="holm")[1]
         for (first, second, difference), adjusted_p in zip(pair_metadata, adjusted, strict=False):
-            significant = bool(adjusted_p <= ALPHA)
+            significant = bool(adjusted_p <= alpha)
             pair_rows.append(
                 {
                     "Group 1": first,
@@ -305,9 +304,9 @@ def _run_pairwise_comparisons(
                         ),
                     )
                 )
-        adjusted = multipletests(raw_p_values, alpha=ALPHA, method="holm")[1]
+        adjusted = multipletests(raw_p_values, alpha=alpha, method="holm")[1]
         for (first, second, difference), adjusted_p in zip(pair_metadata, adjusted, strict=False):
-            significant = bool(adjusted_p <= ALPHA)
+            significant = bool(adjusted_p <= alpha)
             pair_rows.append(
                 {
                     "Group 1": first,
@@ -374,8 +373,8 @@ def _show_pairwise_options(
         st.write(description)
         st.write(
             "Grouping letters summarize the adjusted results: groups that share "
-            "a letter are not significantly different at α = 0.05. Groups with "
-            "no letters in common are significantly different."
+            "a letter are not significantly different at the selected significance "
+            "level. Groups with no letters in common are significantly different."
         )
     return options[selected]
 
@@ -384,13 +383,14 @@ def _display_pairwise_results(
     grouped_values: dict[str, pd.Series],
     method: str,
     center_label: str,
+    alpha: float,
 ) -> None:
     if method == "none":
         return
     if method == "conover" and sum(len(values) for values in grouped_values.values()) <= len(grouped_values):
         st.warning("Conover-Iman requires positive residual degrees of freedom; choose Dunn instead.")
         return
-    pairwise, letters = _run_pairwise_comparisons(grouped_values, method)
+    pairwise, letters = _run_pairwise_comparisons(grouped_values, method, alpha)
     summary = pd.DataFrame(
         [
             {
@@ -407,7 +407,7 @@ def _display_pairwise_results(
     st.markdown("#### Pairwise comparisons")
     st.caption(
         "Groups sharing a letter are not significantly different after multiple-"
-        "comparison correction."
+        f"comparison correction at α = {format_alpha(alpha)}."
     )
     st.dataframe(summary, hide_index=True, width="stretch")
     st.dataframe(with_formatted_p_values(pairwise, ["p-value"]), hide_index=True, width="stretch")

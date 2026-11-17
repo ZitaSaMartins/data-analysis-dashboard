@@ -11,7 +11,7 @@ import streamlit as st
 from scipy import stats
 from statsmodels.formula.api import ols
 
-from modules.stat_format import with_formatted_p_values
+from modules.stat_format import format_alpha_percent, select_significance_level, with_formatted_p_values
 
 from ._shared import _columns, _frame, _heatmap, _need, _product_grouping_letters, _product_tests
 
@@ -29,26 +29,28 @@ def _qda(df: pd.DataFrame, title: str = "QDA / Sensory Profile") -> None:
     )
     if not _need(bool(attributes), "Select at least one attribute."):
         return
+    alpha = select_significance_level()
     clean = _frame(df, [product, *attributes])
     if not _need(clean[product].nunique() >= 2, "Need at least two products."):
         return
     profile = clean.groupby(product, observed=True)[attributes].agg(["mean", "std", "count"])
     st.subheader("Product summaries")
     st.dataframe(profile, width="stretch")
-    tests = _product_tests(clean, product, attributes)
+    tests = _product_tests(clean, product, attributes, alpha)
     st.subheader("Inferential product comparisons")
     st.dataframe(with_formatted_p_values(tests, ["p-value"]), width="stretch")
-    letters = _product_grouping_letters(clean, product, attributes)
+    letters = _product_grouping_letters(clean, product, attributes, alpha)
     if not letters.empty:
         st.subheader("Tukey HSD grouping letters")
         st.dataframe(letters, width="stretch")
         st.caption("Within each attribute, products sharing a letter are not significantly different.")
     means = clean.groupby(product, observed=True)[attributes].mean()
     _heatmap(means, "Mean sensory profile")
-    significant = tests.loc[tests["p-value"] < 0.05, "Attribute"].tolist() if not tests.empty else []
+    significant = tests.loc[tests["p-value"] < alpha, "Attribute"].tolist() if not tests.empty else []
+    alpha_percent = format_alpha_percent(alpha)
     st.write(
-        f"At the 5% level, product means differ for: **{', '.join(significant)}**."
-        if significant else "No selected attribute showed a product difference at the 5% level."
+        f"At the {alpha_percent} level, product means differ for: **{', '.join(significant)}**."
+        if significant else f"No selected attribute showed a product difference at the {alpha_percent} level."
     )
 
 
@@ -67,6 +69,7 @@ def _temporal(df: pd.DataFrame) -> None:
     if not _need(bool(response_candidates), "Select Product/Time columns that leave a numeric response column available."):
         return
     response = st.selectbox("Intensity / dominance score", response_candidates, key="temporal_y")
+    alpha = select_significance_level()
     clean = _frame(df, [product, time, response])
     summary = clean.groupby([product, time], observed=True)[response].agg(["mean", "std", "count"]).reset_index()
     st.dataframe(summary, width="stretch")
@@ -90,7 +93,7 @@ def _temporal(df: pd.DataFrame) -> None:
         )
         if not np.isfinite(interaction_p):
             st.error("The product × time interaction produced an invalid (non-finite) p-value.")
-        elif interaction_p < 0.05:
+        elif interaction_p < alpha:
             st.success("Temporal trajectories differ significantly among products.")
         else:
             st.info("No significant product × time interaction was detected.")

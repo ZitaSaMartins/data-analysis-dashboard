@@ -4,6 +4,8 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
+from modules.stat_format import select_significance_level
+
 from ._shared import _require_numeric, _show_inference, _show_statistic
 
 
@@ -36,6 +38,7 @@ def test_linear_regression(df: pd.DataFrame) -> None:
         outcome_options,
         key="regression_outcome",
     )
+    alpha = select_significance_level()
     if st.button("Run Linear Regression", type="primary", key="run_regression"):
         data = df[[predictor, outcome]].dropna().astype(float)
         if len(data) < 3 or data[predictor].nunique() < 2:
@@ -56,6 +59,7 @@ def test_linear_regression(df: pd.DataFrame) -> None:
             result.pvalue,
             "The predictor has a significant linear relationship with the outcome",
             "No significant linear relationship was detected",
+            alpha,
         )
 
 
@@ -102,6 +106,7 @@ def _test_correlation(
         second_options,
         key=f"{method}_second",
     )
+    alpha = select_significance_level()
     if st.button(
         f"Run {title.removeprefix('🟦 ').removeprefix('🟧 ')}",
         type="primary",
@@ -125,5 +130,6 @@ def _test_correlation(
             p_value,
             "A significant association was detected",
             "No significant association was detected",
+            alpha,
         )
 

@@ -7,7 +7,12 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_alpha_percent,
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
 from ._shared import _columns, _heatmap, _need
 
@@ -32,6 +37,7 @@ def _panel_discrimination(df: pd.DataFrame) -> None:
     product = st.selectbox("Product", [c for c in columns if c != panelist], key="pd_product")
     attributes = st.multiselect("Attributes", [c for c in numeric if c not in {panelist, product}],
                                 default=[c for c in numeric if c not in {panelist, product}][:4], key="pd_attr")
+    alpha = select_significance_level()
     rating_col = _melt_value_name(df, panelist, product, "Attribute")
     rows: list[dict[str, object]] = []
     for (judge, attribute), group in (
@@ -46,10 +52,13 @@ def _panel_discrimination(df: pd.DataFrame) -> None:
     result = pd.DataFrame(rows)
     if not _need(not result.empty, "Need replicated ratings for at least two products per assessor."):
         return
-    result["Discriminates (5%)"] = result["p-value"] < 0.05
+    result[f"Discriminates ({format_alpha_percent(alpha)})"] = result["p-value"] < alpha
     st.dataframe(with_formatted_p_values(result, ["p-value"]), width="stretch")
     _heatmap(result.pivot(index="Assessor", columns="Attribute", values="F").fillna(0), "Product discrimination (F)")
-    st.caption("Larger F statistics and p-values below 0.05 indicate stronger product discrimination.")
+    st.caption(
+        f"Larger F statistics and p-values below {format_alpha_percent(alpha)} indicate stronger "
+        "product discrimination."
+    )
 
 
 def _panel_repeatability(df: pd.DataFrame) -> None:

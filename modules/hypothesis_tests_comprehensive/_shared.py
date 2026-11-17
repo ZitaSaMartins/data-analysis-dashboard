@@ -4,9 +4,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from modules.stat_format import format_p_value
-
-ALPHA = 0.05
+from modules.stat_format import format_alpha, format_p_value
 
 
 def _numeric_columns(df: pd.DataFrame) -> list[str]:
@@ -21,13 +19,14 @@ def _show_inference(
     p_value: float,
     significant_text: str,
     nonsignificant_text: str,
+    alpha: float,
 ) -> None:
     if not np.isfinite(p_value):
         st.error("The test produced an invalid p-value. Check the selected data.")
-    elif p_value <= ALPHA:
-        st.success(f"✅ {significant_text} (p ≤ {ALPHA}).")
+    elif p_value <= alpha:
+        st.success(f"✅ {significant_text} (p ≤ {format_alpha(alpha)}).")
     else:
-        st.info(f"❌ {nonsignificant_text} (p > {ALPHA}).")
+        st.info(f"❌ {nonsignificant_text} (p > {format_alpha(alpha)}).")
 
 
 def _show_statistic(

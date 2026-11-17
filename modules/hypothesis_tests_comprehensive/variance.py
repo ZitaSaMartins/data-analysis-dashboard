@@ -7,12 +7,17 @@ import streamlit as st
 from plotly.subplots import make_subplots
 from scipy import stats
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_alpha,
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
-from ._shared import ALPHA, _require_categorical, _require_numeric, _select_assumption_variables
+from ._shared import _require_categorical, _require_numeric, _select_assumption_variables
 
 
-def _groups_are_normal(samples: list[pd.Series]) -> bool | None:
+def _groups_are_normal(samples: list[pd.Series], alpha: float) -> bool | None:
     """Check whether every supplied group is individually consistent with normality.
 
     Bartlett's assumption is normality within each compared group, not in the
@@ -26,7 +31,7 @@ def _groups_are_normal(samples: list[pd.Series]) -> bool | None:
             return None
         test = stats.shapiro if len(values) < 50 else stats.normaltest
         _, p_value = test(values)
-        if p_value <= ALPHA:
+        if p_value <= alpha:
             return False
     return True
 
@@ -34,11 +39,12 @@ def _groups_are_normal(samples: list[pd.Series]) -> bool | None:
 def _suggest_variance_test(
     variable: str,
     samples: list[pd.Series],
+    alpha: float,
 ) -> tuple[str, str]:
     if len(samples) < 2:
         return "Unavailable", "At least two groups with two observations are required."
 
-    groups_normal = _groups_are_normal(samples)
+    groups_normal = _groups_are_normal(samples, alpha)
     minimum_group_size = min(len(sample) for sample in samples)
     has_extreme_outliers = False
     for sample in samples:
@@ -174,6 +180,8 @@ def run_variance_tests(df: pd.DataFrame) -> None:
         st.error("The grouping variable must contain at least two groups.")
         return
 
+    alpha = select_significance_level()
+
     samples_by_variable: dict[str, dict[str, pd.Series]] = {}
     guidance = []
     for column in selected_columns:
@@ -193,6 +201,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
         suggested_test, reason = _suggest_variance_test(
             column,
             list(grouped_values.values()),
+            alpha,
         )
         group_sizes = [len(values) for values in grouped_values.values()]
         guidance.append({
@@ -268,7 +277,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
 
             test_to_run = selected_test
             if test_to_run == "automatic":
-                suggested_test, _ = _suggest_variance_test(column, samples)
+                suggested_test, _ = _suggest_variance_test(column, samples, alpha)
                 test_to_run = {
                     "Bartlett": "bartlett",
                     "Fligner-Killeen": "fligner",
@@ -292,7 +301,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
                 )
                 continue
 
-            supports_equal_variance = p_value > ALPHA
+            supports_equal_variance = p_value > alpha
             results.append({
                 "Variable": column,
                 "Groups": len(grouped_values),
@@ -313,7 +322,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
                 "p_value": p_value,
                 "reason": (
                     f"{test_name}: p = {format_p_value(p_value)} "
-                    f"({'>' if supports_equal_variance else '≤'} {ALPHA})."
+                    f"({'>' if supports_equal_variance else '≤'} {format_alpha(alpha)})."
                 ),
             })
             for group, values in grouped_values.items():
@@ -331,7 +340,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
         st.session_state.variance_test_result = {
             "variables": saved_results,
             "grouping_variable": grouping_variable,
-            "alpha": ALPHA,
+            "alpha": alpha,
         }
         result_df = pd.DataFrame(results)
         st.dataframe(
@@ -343,8 +352,9 @@ def run_variance_tests(df: pd.DataFrame) -> None:
             },
         )
         st.caption(
-            "Interpretation: p > 0.05 means the test did not find a significant "
-            "variance difference; it does not prove that group variances are identical."
+            f"Interpretation: p > {format_alpha(alpha)} means the test did not find "
+            "a significant variance difference; it does not prove that group "
+            "variances are identical."
         )
 
         st.markdown("#### Group variance details")

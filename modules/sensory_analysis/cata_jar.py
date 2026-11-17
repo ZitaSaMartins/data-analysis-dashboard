@@ -13,7 +13,12 @@ from scipy import stats
 from statsmodels.stats.contingency_tables import cochrans_q, mcnemar
 from statsmodels.stats.multitest import multipletests
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_alpha_percent,
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
 from ._cata_math import bootstrap_mean_drop, correspondence_analysis, pcoa
 from ._shared import _columns, _compact_letters, _heatmap, _interpret_p, _need, _scatter_labels
@@ -58,6 +63,7 @@ def _cata(df: pd.DataFrame) -> None:
         key="cata_ideal",
     )
     ideal_product = None if ideal_choice == "(no ideal product)" else ideal_choice
+    alpha = select_significance_level()
 
     work_columns = [consumer, product, *attributes] + ([liking] if liking else [])
     work = df.loc[:, work_columns].copy()
@@ -83,7 +89,7 @@ def _cata(df: pd.DataFrame) -> None:
                            "p-value": result.pvalue})
     q_table = pd.DataFrame(q_rows)
     if not q_table.empty:
-        q_table["Significant (5%)"] = q_table["p-value"] < 0.05
+        q_table[f"Significant ({format_alpha_percent(alpha)})"] = q_table["p-value"] < alpha
         st.subheader("Cochran's Q by attribute")
         st.dataframe(with_formatted_p_values(q_table, ["p-value"]), width="stretch")
 
@@ -119,11 +125,11 @@ def _cata(df: pd.DataFrame) -> None:
                 )
         if not raw_p_values:
             continue
-        adjusted = multipletests(raw_p_values, alpha=0.05, method="holm")[1]
+        adjusted = multipletests(raw_p_values, alpha=alpha, method="holm")[1]
         significant_pairs = {
             tuple(sorted((first, second)))
             for (first, second, _), adjusted_p in zip(metadata, adjusted, strict=False)
-            if adjusted_p < 0.05
+            if adjusted_p < alpha
         }
         pairwise_rows.extend(
             {
@@ -132,7 +138,7 @@ def _cata(df: pd.DataFrame) -> None:
                 "Product 2": second,
                 "Citation difference": difference,
                 "Adjusted p-value": adjusted_p,
-                "Significant (5%)": adjusted_p < 0.05,
+                f"Significant ({format_alpha_percent(alpha)})": adjusted_p < alpha,
             }
             for (first, second, difference), adjusted_p in zip(metadata, adjusted, strict=False)
         )
@@ -156,11 +162,11 @@ def _cata(df: pd.DataFrame) -> None:
         st.caption("Within each attribute, products sharing a letter are not significantly different.")
         st.dataframe(pd.DataFrame(letter_rows), width="stretch")
 
-    _cata_independence_test(real, product, attributes)
-    _cata_correspondence(real, product, attributes)
+    _cata_independence_test(real, product, attributes, alpha)
+    _cata_correspondence(real, product, attributes, alpha)
     _cata_correlation_pcoa(real, attributes, liking)
     if ideal_product:
-        _cata_ideal_penalty_analysis(work, consumer, product, attributes, liking, ideal_product)
+        _cata_ideal_penalty_analysis(work, consumer, product, attributes, liking, ideal_product, alpha)
     else:
         st.info(
             "Select an ideal product above (and a liking column) to run the "
@@ -231,7 +237,12 @@ def _cata_data_validation(data: pd.DataFrame, consumer: str, attributes: Sequenc
     st.caption("Attributes with wide boxes have the least assessor consensus.")
 
 
-def _cata_independence_test(data: pd.DataFrame, product: str, attributes: Sequence[str]) -> None:
+def _cata_independence_test(
+    data: pd.DataFrame,
+    product: str,
+    attributes: Sequence[str],
+    alpha: float,
+) -> None:
     """For each product, flag attribute pairs that are redundant (significantly associated)."""
     st.subheader("Attribute independence test")
     st.caption(
@@ -254,7 +265,7 @@ def _cata_independence_test(data: pd.DataFrame, product: str, attributes: Sequen
                         "Attribute 1": first,
                         "Attribute 2": second,
                         "p-value": float(p_value),
-                        "Redundant (5%)": bool(p_value < 0.05),
+                        f"Redundant ({format_alpha_percent(alpha)})": bool(p_value < alpha),
                     }
                 )
     result = pd.DataFrame(rows)
@@ -264,7 +275,7 @@ def _cata_independence_test(data: pd.DataFrame, product: str, attributes: Sequen
         with_formatted_p_values(result.sort_values(["Product", "p-value"]), ["p-value"]),
         width="stretch",
     )
-    redundant = result.loc[result["Redundant (5%)"]]
+    redundant = result.loc[result[f"Redundant ({format_alpha_percent(alpha)})"]]
     if redundant.empty:
         st.success("No attribute pair shows significant redundancy within any product.")
     else:
@@ -273,7 +284,12 @@ def _cata_independence_test(data: pd.DataFrame, product: str, attributes: Sequen
         )
 
 
-def _cata_correspondence(data: pd.DataFrame, product: str, attributes: Sequence[str]) -> None:
+def _cata_correspondence(
+    data: pd.DataFrame,
+    product: str,
+    attributes: Sequence[str],
+    alpha: float,
+) -> None:
     """Chi-square-distance Correspondence Analysis of the product x attribute citation table."""
     st.subheader("Correspondence Analysis (attribute profiles)")
     counts = data.groupby(product, observed=True)[attributes].sum()
@@ -282,7 +298,7 @@ def _cata_correspondence(data: pd.DataFrame, product: str, attributes: Sequence[
     chi2_statistic, chi2_p, _, _ = stats.chi2_contingency(counts)
     row_coords, col_coords, inertia_fraction = correspondence_analysis(counts)
     st.write(f"χ² = {chi2_statistic:.3f}, p = {format_p_value(chi2_p)} for the product × attribute association.")
-    _interpret_p(float(chi2_p), subject="product sensory profiles")
+    _interpret_p(float(chi2_p), alpha, subject="product sensory profiles")
     first_two = float(inertia_fraction[:2].sum()) * 100 if len(inertia_fraction) >= 2 else float(inertia_fraction.sum()) * 100
     st.caption(f"The first two dimensions explain {first_two:.2f}% of total inertia.")
 
@@ -349,6 +365,7 @@ def _cata_ideal_penalty_analysis(
     attributes: Sequence[str],
     liking: str | None,
     ideal_product: str,
+    alpha: float,
 ) -> None:
     """Must-have / nice-to-have / must-not-have penalty analysis against an ideal product."""
     st.subheader("Ideal-product penalty analysis")
@@ -416,17 +433,17 @@ def _cata_ideal_penalty_analysis(
     must_have_table = pd.DataFrame(must_have_rows)
     if not must_have_table.empty:
         must_have_table["Adjusted p-value"] = multipletests(
-            must_have_table["p-value"], alpha=0.05, method="holm"
+            must_have_table["p-value"], alpha=alpha, method="holm"
         )[1]
         must_have_table["Must-have"] = (
-            (must_have_table["Adjusted p-value"] < 0.05) & (must_have_table["Mean liking drop"] > 0)
+            (must_have_table["Adjusted p-value"] < alpha) & (must_have_table["Mean liking drop"] > 0)
         )
     not_nice_table = pd.DataFrame(not_nice_rows)
     if not not_nice_table.empty:
         not_nice_table["Adjusted p-value"] = multipletests(
-            not_nice_table["p-value"], alpha=0.05, method="holm"
+            not_nice_table["p-value"], alpha=alpha, method="holm"
         )[1]
-        significant = not_nice_table["Adjusted p-value"] < 0.05
+        significant = not_nice_table["Adjusted p-value"] < alpha
         not_nice_table["Must-not-have"] = significant & (not_nice_table["Mean liking drop"] > 0)
         not_nice_table["Nice-to-have"] = significant & (not_nice_table["Mean liking drop"] < 0)
     if must_have_table.empty and not_nice_table.empty:

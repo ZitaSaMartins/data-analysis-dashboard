@@ -15,7 +15,12 @@ from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multitest import multipletests
 
-from modules.stat_format import format_p_value, with_formatted_p_values
+from modules.stat_format import (
+    format_alpha_percent,
+    format_p_value,
+    select_significance_level,
+    with_formatted_p_values,
+)
 
 from ._shared import _columns, _compact_letters, _frame, _heatmap, _interpret_p, _need, _scatter_labels
 
@@ -34,6 +39,7 @@ def _hedonic(df: pd.DataFrame) -> None:
     liking = st.selectbox("Liking", liking_candidates, key="hed_liking")
     consumer = st.selectbox("Consumer (optional)", ["(independent observations)", *[c for c in columns if c not in {product, liking}]],
                             key="hed_consumer")
+    alpha = select_significance_level()
     clean = _frame(df, [product, liking] + ([] if consumer.startswith("(") else [consumer]))
     summary = clean.groupby(product, observed=True)[liking].agg(["mean", "std", "median", "count"])
     pairwise_rows: list[dict[str, object]] = []
@@ -52,7 +58,7 @@ def _hedonic(df: pd.DataFrame) -> None:
         method = "One-way ANOVA"
         values = np.concatenate(list(grouped.values()))
         labels = np.concatenate([[name] * len(group) for name, group in grouped.items()])
-        tukey = pairwise_tukeyhsd(values, labels, alpha=0.05)
+        tukey = pairwise_tukeyhsd(values, labels, alpha=alpha)
         first_indices, second_indices = tukey._multicomp.pairindices
         for index, (first_index, second_index) in enumerate(zip(first_indices, second_indices, strict=False)):
             first = str(tukey._multicomp.groupsunique[first_index])
@@ -64,7 +70,7 @@ def _hedonic(df: pd.DataFrame) -> None:
                     "Product 2": second,
                     "Mean difference": float(tukey.meandiffs[index]),
                     "Adjusted p-value": float(tukey.pvalues[index]),
-                    "Significant (5%)": significant,
+                    f"Significant ({format_alpha_percent(alpha)})": significant,
                 }
             )
             if significant:
@@ -85,23 +91,23 @@ def _hedonic(df: pd.DataFrame) -> None:
                 _, pair_p = (0.0, 1.0) if np.allclose(difference, 0) else stats.wilcoxon(difference)
                 raw_p_values.append(float(pair_p))
                 metadata.append((str(first), str(second), float(difference.mean())))
-        adjusted = multipletests(raw_p_values, alpha=0.05, method="holm")[1]
+        adjusted = multipletests(raw_p_values, alpha=alpha, method="holm")[1]
         for (first, second, difference), adjusted_p in zip(metadata, adjusted, strict=False):
-            significant = bool(adjusted_p < 0.05)
+            significant = bool(adjusted_p < alpha)
             pairwise_rows.append(
                 {
                     "Product 1": first,
                     "Product 2": second,
                     "Mean difference": difference,
                     "Adjusted p-value": adjusted_p,
-                    "Significant (5%)": significant,
+                    f"Significant ({format_alpha_percent(alpha)})": significant,
                 }
             )
             if significant:
                 significant_pairs.add(tuple(sorted((first, second))))
         posthoc_method = "Holm-adjusted Wilcoxon"
     st.write(f"{method}: statistic = **{statistic:.3f}**, p = **{format_p_value(p_value)}**")
-    _interpret_p(float(p_value))
+    _interpret_p(float(p_value), alpha)
     letters = _compact_letters(sorted(tested_products), significant_pairs)
     summary["Grouping letters"] = [
         letters[str(value)] if str(value) in tested_products else "Untested"

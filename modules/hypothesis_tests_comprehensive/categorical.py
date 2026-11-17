@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
-from modules.stat_format import format_p_value
+from modules.stat_format import format_p_value, select_significance_level
 
 from ._shared import _require_categorical, _show_inference
 
@@ -28,6 +28,7 @@ def test_chi_square(df: pd.DataFrame) -> None:
         second_options,
         key="chi_square_second",
     )
+    alpha = select_significance_level()
     if st.button("Run Chi-Square Test", type="primary", key="run_chi_square"):
         contingency = pd.crosstab(df[first], df[second])
         if contingency.shape[0] < 2 or contingency.shape[1] < 2:
@@ -55,5 +56,6 @@ def test_chi_square(df: pd.DataFrame) -> None:
             p_value,
             "The categorical variables are significantly associated",
             "No significant categorical association was detected",
+            alpha,
         )
 
