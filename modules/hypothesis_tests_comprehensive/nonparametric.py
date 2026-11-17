@@ -1,10 +1,11 @@
 """Non-parametric tests: Mann-Whitney, Wilcoxon, Kruskal-Wallis, Friedman, Mood's median."""
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from scipy import stats
 
-from modules.stat_format import format_p_value, select_significance_level
+from modules.stat_format import format_alpha, select_significance_level, with_formatted_p_values
 
 from ._shared import (
     _paired_columns,
@@ -12,6 +13,7 @@ from ._shared import (
     _require_numeric,
     _show_inference,
     _show_statistic,
+    _show_variable_section_header,
     _two_group_inputs,
 )
 from .posthoc import _display_pairwise_results, _show_pairwise_options
@@ -139,8 +141,9 @@ def test_kruskal_wallis(df: pd.DataFrame) -> None:
         if not selected_variables:
             st.error("Select at least one numeric outcome variable.")
             return
+        summary_rows: list[dict[str, object]] = []
+        pairwise_inputs: dict[str, dict[str, pd.Series]] = {}
         for variable in selected_variables:
-            st.markdown(f"### Outcome: {variable}")
             grouped_values = {
                 str(group_name): group[variable].dropna().astype(float)
                 for group_name, group in df.groupby(grouping_variable, observed=True)
@@ -159,13 +162,38 @@ def test_kruskal_wallis(df: pd.DataFrame) -> None:
             except ValueError as error:
                 st.warning(f"'{variable}' could not be tested: {error}")
                 continue
-            _show_statistic("H-statistic", statistic, p_value)
-            _show_inference(
-                p_value,
-                "At least one group distribution is significantly different",
-                "No significant difference among group distributions was detected",
-                alpha,
-            )
+            is_significant = np.isfinite(p_value) and p_value <= alpha
+            summary_rows.append({
+                "Variable": variable,
+                "Groups": len(grouped_values),
+                "H-statistic": statistic,
+                "p-value": p_value,
+                "Interpretation": (
+                    "At least one group distribution differs significantly ✅"
+                    if is_significant
+                    else "No significant difference among group distributions ❌"
+                ),
+            })
+            pairwise_inputs[variable] = grouped_values
+
+        if not summary_rows:
+            st.error("No valid Kruskal-Wallis results were produced.")
+            return
+
+        st.markdown("#### Summary")
+        st.dataframe(
+            with_formatted_p_values(pd.DataFrame(summary_rows), ["p-value"]),
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "H-statistic": st.column_config.NumberColumn(format="%.4f"),
+            },
+        )
+        st.caption(f"Interpretation uses the selected significance level α = {format_alpha(alpha)}.")
+
+        st.markdown("#### Pairwise comparisons by variable")
+        for index, (variable, grouped_values) in enumerate(pairwise_inputs.items()):
+            _show_variable_section_header(variable, index)
             _display_pairwise_results(grouped_values, pairwise_method, "Median", alpha)
 
 
@@ -228,8 +256,9 @@ def test_mood_median(df: pd.DataFrame) -> None:
         if not selected_variables:
             st.error("Select at least one numeric outcome variable.")
             return
+        summary_rows: list[dict[str, object]] = []
+        pairwise_inputs: dict[str, tuple[dict[str, pd.Series], np.ndarray]] = {}
         for variable in selected_variables:
-            st.markdown(f"### Outcome: {variable}")
             grouped_values = {
                 str(group_name): group[variable].dropna().astype(float)
                 for group_name, group in df.groupby(grouping_variable, observed=True)
@@ -248,16 +277,42 @@ def test_mood_median(df: pd.DataFrame) -> None:
             except ValueError as error:
                 st.warning(f"'{variable}' could not be tested: {error}")
                 continue
-            statistic_col, p_value_col, median_col = st.columns(3)
-            statistic_col.metric("χ² statistic", f"{statistic:.4f}")
-            p_value_col.metric("p-value", format_p_value(p_value))
-            median_col.metric("Grand median", f"{median:.4f}")
+            is_significant = np.isfinite(p_value) and p_value <= alpha
+            summary_rows.append({
+                "Variable": variable,
+                "Groups": len(grouped_values),
+                "χ² statistic": statistic,
+                "Grand median": median,
+                "p-value": p_value,
+                "Interpretation": (
+                    "Group medians differ significantly ✅"
+                    if is_significant
+                    else "No significant difference among group medians ❌"
+                ),
+            })
+            pairwise_inputs[variable] = (grouped_values, contingency)
+
+        if not summary_rows:
+            st.error("No valid Mood's median results were produced.")
+            return
+
+        st.markdown("#### Summary")
+        st.dataframe(
+            with_formatted_p_values(pd.DataFrame(summary_rows), ["p-value"]),
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "χ² statistic": st.column_config.NumberColumn(format="%.4f"),
+                "Grand median": st.column_config.NumberColumn(format="%.4f"),
+            },
+        )
+        st.caption(f"Interpretation uses the selected significance level α = {format_alpha(alpha)}.")
+
+        st.markdown("#### Pairwise comparisons by variable")
+        for index, (variable, (grouped_values, contingency)) in enumerate(pairwise_inputs.items()):
+            _show_variable_section_header(variable, index)
+            st.caption("Contingency table: counts above/below the grand median, by group.")
             st.dataframe(pd.DataFrame(contingency), use_container_width=True)
-            _show_inference(
-                p_value,
-                "The group medians are significantly different",
-                "No significant difference among group medians was detected",
-                alpha,
-            )
             _display_pairwise_results(grouped_values, pairwise_method, "Median", alpha)
+
 

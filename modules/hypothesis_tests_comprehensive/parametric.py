@@ -11,6 +11,7 @@ from statsmodels.formula.api import ols
 from statsmodels.stats.anova import AnovaRM
 
 from modules.stat_format import (
+    format_alpha,
     format_p_value,
     select_significance_level,
     with_formatted_p_values,
@@ -22,6 +23,7 @@ from ._shared import (
     _require_numeric,
     _show_inference,
     _show_statistic,
+    _show_variable_section_header,
     _two_group_inputs,
 )
 from .posthoc import _display_pairwise_results, _show_pairwise_options
@@ -169,8 +171,9 @@ def test_anova(df: pd.DataFrame) -> None:
         if not selected_variables:
             st.error("Select at least one numeric outcome variable.")
             return
+        summary_rows: list[dict[str, object]] = []
+        pairwise_inputs: dict[str, dict[str, pd.Series]] = {}
         for variable in selected_variables:
-            st.markdown(f"### Outcome: {variable}")
             grouped_values = {
                 str(group_name): group[variable].dropna().astype(float)
                 for group_name, group in df.groupby(grouping_variable, observed=True)
@@ -194,14 +197,40 @@ def test_anova(df: pd.DataFrame) -> None:
             )
             total_ss = ((all_values - grand_mean) ** 2).sum()
             eta_squared = between_ss / total_ss if total_ss > 0 else np.nan
-            _show_statistic("F-statistic", statistic, p_value)
-            st.metric("Eta squared", f"{eta_squared:.4f}")
-            _show_inference(
-                p_value,
-                "At least one group mean is significantly different",
-                "No significant difference among group means was detected",
-                alpha,
-            )
+            is_significant = np.isfinite(p_value) and p_value <= alpha
+            summary_rows.append({
+                "Variable": variable,
+                "Groups": len(grouped_values),
+                "F-statistic": statistic,
+                "Eta squared": eta_squared,
+                "p-value": p_value,
+                "Interpretation": (
+                    "At least one group mean differs significantly ✅"
+                    if is_significant
+                    else "No significant difference among group means ❌"
+                ),
+            })
+            pairwise_inputs[variable] = grouped_values
+
+        if not summary_rows:
+            st.error("No valid ANOVA results were produced.")
+            return
+
+        st.markdown("#### Summary")
+        st.dataframe(
+            with_formatted_p_values(pd.DataFrame(summary_rows), ["p-value"]),
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "F-statistic": st.column_config.NumberColumn(format="%.4f"),
+                "Eta squared": st.column_config.NumberColumn(format="%.4f"),
+            },
+        )
+        st.caption(f"Interpretation uses the selected significance level α = {format_alpha(alpha)}.")
+
+        st.markdown("#### Pairwise comparisons by variable")
+        for index, (variable, grouped_values) in enumerate(pairwise_inputs.items()):
+            _show_variable_section_header(variable, index)
             _display_pairwise_results(grouped_values, pairwise_method, "Mean", alpha)
 
 

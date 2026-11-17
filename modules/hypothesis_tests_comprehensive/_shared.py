@@ -39,6 +39,19 @@ def _show_statistic(
     p_value_col.metric("p-value", format_p_value(p_value))
 
 
+def _show_variable_section_header(variable: str, index: int) -> None:
+    """Render a clearly separated, color-highlighted heading for a per-variable section.
+
+    Used by tests that loop over several selected outcome variables (e.g.
+    ANOVA, Kruskal-Wallis, Mood's median) so each variable's detailed results
+    are visually distinct from the next: a divider before every section except
+    the first, followed by the variable name in a colored badge.
+    """
+    if index > 0:
+        st.divider()
+    st.markdown(f"#### :violet-badge[{variable}]")
+
+
 def _require_numeric(df: pd.DataFrame, minimum: int = 1) -> list[str] | None:
     columns = _numeric_columns(df)
     if len(columns) < minimum:
