@@ -15,6 +15,8 @@ from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multitest import multipletests
 
+from modules.stat_format import format_p_value, with_formatted_p_values
+
 from ._shared import _columns, _compact_letters, _frame, _heatmap, _interpret_p, _need, _scatter_labels
 
 
@@ -98,7 +100,7 @@ def _hedonic(df: pd.DataFrame) -> None:
             if significant:
                 significant_pairs.add(tuple(sorted((first, second))))
         posthoc_method = "Holm-adjusted Wilcoxon"
-    st.write(f"{method}: statistic = **{statistic:.3f}**, p = **{p_value:.4g}**")
+    st.write(f"{method}: statistic = **{statistic:.3f}**, p = **{format_p_value(p_value)}**")
     _interpret_p(float(p_value))
     letters = _compact_letters(sorted(tested_products), significant_pairs)
     summary["Grouping letters"] = [
@@ -107,7 +109,7 @@ def _hedonic(df: pd.DataFrame) -> None:
     ]
     st.dataframe(summary, width="stretch")
     st.subheader(f"Pairwise comparisons: {posthoc_method}")
-    st.dataframe(pd.DataFrame(pairwise_rows), width="stretch")
+    st.dataframe(with_formatted_p_values(pd.DataFrame(pairwise_rows), ["Adjusted p-value"]), width="stretch")
     st.caption("Products sharing a grouping letter are not significantly different.")
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.boxplot(data=clean, x=product, y=liking, ax=ax)

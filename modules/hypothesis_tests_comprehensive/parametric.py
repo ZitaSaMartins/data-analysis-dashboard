@@ -10,6 +10,8 @@ from scipy import stats
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import AnovaRM
 
+from modules.stat_format import format_p_value, with_formatted_p_values
+
 from ._shared import (
     ALPHA,
     _paired_columns,
@@ -418,14 +420,13 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
         )
         st.markdown("### ANOVA Results")
         st.dataframe(
-            pd.DataFrame(result_rows),
+            with_formatted_p_values(pd.DataFrame(result_rows), ["p-value"]),
             hide_index=True,
             width="stretch",
             column_config={
                 "Sum of squares": st.column_config.NumberColumn(format="%.4f"),
                 "df": st.column_config.NumberColumn(format="%.2f"),
                 "F": st.column_config.NumberColumn(format="%.4f"),
-                "p-value": st.column_config.NumberColumn(format="%.4f"),
                 "Partial eta squared": st.column_config.NumberColumn(format="%.4f"),
             },
         )
@@ -434,7 +435,7 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
         for metric_column, result in zip(metric_columns, result_rows, strict=False):
             with metric_column:
                 st.markdown(f"**{result['Effect']}**")
-                st.metric("p-value", f"{result['p-value']:.4f}")
+                st.metric("p-value", format_p_value(result['p-value']))
                 st.metric(
                     "Partial η²",
                     f"{result['Partial eta squared']:.4f}",
@@ -475,11 +476,11 @@ def test_two_way_anova(df: pd.DataFrame) -> None:
         assumption_columns = st.columns(2)
         assumption_columns[0].metric(
             "Residual normality (Shapiro p)",
-            f"{shapiro_p:.4f}",
+            format_p_value(shapiro_p),
         )
         assumption_columns[1].metric(
             "Equal cell variance (Levene p)",
-            f"{levene_p:.4f}",
+            format_p_value(levene_p),
         )
         if shapiro_p <= ALPHA:
             st.warning("Residuals show significant evidence against normality.")
@@ -583,7 +584,7 @@ def test_repeated_anova(df: pd.DataFrame) -> None:
             st.error(f"Repeated measures ANOVA could not be calculated: {error}")
             return
         table = result.anova_table.reset_index(names="Effect")
-        st.dataframe(table, use_container_width=True)
+        st.dataframe(with_formatted_p_values(table, ["Pr > F"]), use_container_width=True)
         p_value = float(table.loc[0, "Pr > F"])
         statistic = float(table.loc[0, "F Value"])
         _show_statistic("F-statistic", statistic, p_value)

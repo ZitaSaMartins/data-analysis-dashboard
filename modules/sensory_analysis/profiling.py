@@ -11,6 +11,8 @@ import streamlit as st
 from scipy import stats
 from statsmodels.formula.api import ols
 
+from modules.stat_format import with_formatted_p_values
+
 from ._shared import _columns, _frame, _heatmap, _need, _product_grouping_letters, _product_tests
 
 
@@ -35,7 +37,7 @@ def _qda(df: pd.DataFrame, title: str = "QDA / Sensory Profile") -> None:
     st.dataframe(profile, width="stretch")
     tests = _product_tests(clean, product, attributes)
     st.subheader("Inferential product comparisons")
-    st.dataframe(tests, width="stretch")
+    st.dataframe(with_formatted_p_values(tests, ["p-value"]), width="stretch")
     letters = _product_grouping_letters(clean, product, attributes)
     if not letters.empty:
         st.subheader("Tukey HSD grouping letters")
@@ -82,7 +84,7 @@ def _temporal(df: pd.DataFrame) -> None:
         anova = sm.stats.anova_lm(model, typ=2).reset_index()
         anova.columns = ["Effect", *anova.columns[1:]]
         st.subheader("Product × time ANOVA")
-        st.dataframe(anova, width="stretch")
+        st.dataframe(with_formatted_p_values(anova, ["PR(>F)"]), width="stretch")
         interaction_p = float(
             anova.loc[anova["Effect"] == "C(_product):C(_time)", "PR(>F)"].iloc[0]
         )
@@ -115,7 +117,7 @@ def _temporal(df: pd.DataFrame) -> None:
                 }
             )
     st.subheader("Product-specific temporal trends")
-    st.dataframe(pd.DataFrame(trend_rows), width="stretch")
+    st.dataframe(with_formatted_p_values(pd.DataFrame(trend_rows), ["Slope p-value"]), width="stretch")
     st.caption(
         "Positive slopes indicate increasing intensity and negative slopes indicate decay. "
         "Separated or non-parallel curves suggest product-specific temporal evolution."

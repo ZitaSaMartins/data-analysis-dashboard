@@ -7,6 +7,8 @@ import streamlit as st
 from plotly.subplots import make_subplots
 from scipy import stats
 
+from modules.stat_format import format_p_value, with_formatted_p_values
+
 from ._shared import ALPHA, _require_categorical, _require_numeric, _select_assumption_variables
 
 
@@ -310,7 +312,7 @@ def run_variance_tests(df: pd.DataFrame) -> None:
                 "test_name": test_name,
                 "p_value": p_value,
                 "reason": (
-                    f"{test_name}: p = {p_value:.4f} "
+                    f"{test_name}: p = {format_p_value(p_value)} "
                     f"({'>' if supports_equal_variance else '≤'} {ALPHA})."
                 ),
             })
@@ -333,12 +335,11 @@ def run_variance_tests(df: pd.DataFrame) -> None:
         }
         result_df = pd.DataFrame(results)
         st.dataframe(
-            result_df,
+            with_formatted_p_values(result_df, ["p-value"]),
             hide_index=True,
             width="stretch",
             column_config={
                 "Statistic": st.column_config.NumberColumn(format="%.4f"),
-                "p-value": st.column_config.NumberColumn(format="%.4f"),
             },
         )
         st.caption(

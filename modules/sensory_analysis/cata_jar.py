@@ -13,6 +13,8 @@ from scipy import stats
 from statsmodels.stats.contingency_tables import cochrans_q, mcnemar
 from statsmodels.stats.multitest import multipletests
 
+from modules.stat_format import format_p_value, with_formatted_p_values
+
 from ._cata_math import bootstrap_mean_drop, correspondence_analysis, pcoa
 from ._shared import _columns, _compact_letters, _heatmap, _interpret_p, _need, _scatter_labels
 
@@ -83,7 +85,7 @@ def _cata(df: pd.DataFrame) -> None:
     if not q_table.empty:
         q_table["Significant (5%)"] = q_table["p-value"] < 0.05
         st.subheader("Cochran's Q by attribute")
-        st.dataframe(q_table, width="stretch")
+        st.dataframe(with_formatted_p_values(q_table, ["p-value"]), width="stretch")
 
     pairwise_rows: list[dict[str, object]] = []
     letter_rows: list[dict[str, object]] = []
@@ -148,7 +150,7 @@ def _cata(df: pd.DataFrame) -> None:
         )
     if pairwise_rows:
         st.subheader("Holm-adjusted pairwise McNemar comparisons")
-        st.dataframe(pd.DataFrame(pairwise_rows), width="stretch")
+        st.dataframe(with_formatted_p_values(pd.DataFrame(pairwise_rows), ["Adjusted p-value"]), width="stretch")
     if letter_rows:
         st.subheader("Pairwise comparison letters")
         st.caption("Within each attribute, products sharing a letter are not significantly different.")
@@ -258,7 +260,10 @@ def _cata_independence_test(data: pd.DataFrame, product: str, attributes: Sequen
     result = pd.DataFrame(rows)
     if not _need(not result.empty, "Not enough data to test attribute independence."):
         return
-    st.dataframe(result.sort_values(["Product", "p-value"]), width="stretch")
+    st.dataframe(
+        with_formatted_p_values(result.sort_values(["Product", "p-value"]), ["p-value"]),
+        width="stretch",
+    )
     redundant = result.loc[result["Redundant (5%)"]]
     if redundant.empty:
         st.success("No attribute pair shows significant redundancy within any product.")
@@ -276,7 +281,7 @@ def _cata_correspondence(data: pd.DataFrame, product: str, attributes: Sequence[
         return
     chi2_statistic, chi2_p, _, _ = stats.chi2_contingency(counts)
     row_coords, col_coords, inertia_fraction = correspondence_analysis(counts)
-    st.write(f"χ² = {chi2_statistic:.3f}, p = {chi2_p:.4g} for the product × attribute association.")
+    st.write(f"χ² = {chi2_statistic:.3f}, p = {format_p_value(chi2_p)} for the product × attribute association.")
     _interpret_p(float(chi2_p), subject="product sensory profiles")
     first_two = float(inertia_fraction[:2].sum()) * 100 if len(inertia_fraction) >= 2 else float(inertia_fraction.sum()) * 100
     st.caption(f"The first two dimensions explain {first_two:.2f}% of total inertia.")
@@ -430,10 +435,16 @@ def _cata_ideal_penalty_analysis(
 
     if not must_have_table.empty:
         st.markdown("**Must-have check:** liking among consumers who wanted this attribute")
-        st.dataframe(must_have_table, width="stretch")
+        st.dataframe(
+            with_formatted_p_values(must_have_table, ["p-value", "Adjusted p-value"]),
+            width="stretch",
+        )
     if not not_nice_table.empty:
         st.markdown("**Must-not-have / nice-to-have check:** liking among consumers who did not want this attribute")
-        st.dataframe(not_nice_table, width="stretch")
+        st.dataframe(
+            with_formatted_p_values(not_nice_table, ["p-value", "Adjusted p-value"]),
+            width="stretch",
+        )
 
     summary_rows: list[dict[str, object]] = []
     for attribute in attributes:

@@ -7,6 +7,8 @@ from scipy import stats
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multitest import multipletests
 
+from modules.stat_format import with_formatted_p_values
+
 from ._shared import ALPHA
 
 
@@ -408,5 +410,5 @@ def _display_pairwise_results(
         "comparison correction."
     )
     st.dataframe(summary, hide_index=True, width="stretch")
-    st.dataframe(pairwise, hide_index=True, width="stretch")
+    st.dataframe(with_formatted_p_values(pairwise, ["p-value"]), hide_index=True, width="stretch")
 

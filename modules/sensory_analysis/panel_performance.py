@@ -7,6 +7,8 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
+from modules.stat_format import format_p_value, with_formatted_p_values
+
 from ._shared import _columns, _heatmap, _need
 
 
@@ -45,7 +47,7 @@ def _panel_discrimination(df: pd.DataFrame) -> None:
     if not _need(not result.empty, "Need replicated ratings for at least two products per assessor."):
         return
     result["Discriminates (5%)"] = result["p-value"] < 0.05
-    st.dataframe(result, width="stretch")
+    st.dataframe(with_formatted_p_values(result, ["p-value"]), width="stretch")
     _heatmap(result.pivot(index="Assessor", columns="Attribute", values="F").fillna(0), "Product discrimination (F)")
     st.caption("Larger F statistics and p-values below 0.05 indicate stronger product discrimination.")
 
@@ -105,7 +107,7 @@ def _panel_agreement(df: pd.DataFrame) -> None:
     chi_square = judges * (products - 1) * w_value
     p_value = float(stats.chi2.sf(chi_square, products - 1))
     st.metric("Kendall's W", f"{w_value:.3f}")
-    st.write(f"χ²({products - 1}) = {chi_square:.3f}, p = {p_value:.4g}")
+    st.write(f"χ²({products - 1}) = {chi_square:.3f}, p = {format_p_value(p_value)}")
     _heatmap(matrix.corr(method="spearman"), "Pairwise assessor Spearman correlations")
     st.caption("W ranges from 0 (no common ordering) to 1 (complete agreement).")
 

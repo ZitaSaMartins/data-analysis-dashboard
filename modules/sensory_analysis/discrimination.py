@@ -9,6 +9,8 @@ import streamlit as st
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
+from modules.stat_format import format_p_value, with_formatted_p_values
+
 from ._shared import _columns, _compact_letters, _interpret_p, _need
 
 
@@ -50,17 +52,20 @@ def _discrimination(df: pd.DataFrame, name: str, chance: float, key: str) -> Non
         critical_correct if critical_correct <= total else "Not attainable"
     )
     st.dataframe(
-        pd.DataFrame(
-            {
-                "Correct": [successes],
-                "Total": [total],
-                "Observed proportion": [successes / total],
-                "Chance proportion": [chance],
-                "Critical correct (α=0.05)": [critical_display],
-                "Exact p-value": [result.pvalue],
-                "95% CI low": [result.proportion_ci().low],
-                "95% CI high": [result.proportion_ci().high],
-            }
+        with_formatted_p_values(
+            pd.DataFrame(
+                {
+                    "Correct": [successes],
+                    "Total": [total],
+                    "Observed proportion": [successes / total],
+                    "Chance proportion": [chance],
+                    "Critical correct (α=0.05)": [critical_display],
+                    "Exact p-value": [result.pvalue],
+                    "95% CI low": [result.proportion_ci().low],
+                    "95% CI high": [result.proportion_ci().high],
+                }
+            ),
+            ["Exact p-value"],
         ),
         width="stretch",
     )
@@ -93,7 +98,7 @@ def _ranking(df: pd.DataFrame) -> None:
         return
     statistic, p_value = stats.friedmanchisquare(*(pivot[column] for column in pivot))
     summary = pd.DataFrame({"Mean rank": pivot.mean(), "Median rank": pivot.median()}).sort_values("Mean rank")
-    st.write(f"Friedman χ²({pivot.shape[1] - 1}) = **{statistic:.3f}**, p = **{p_value:.4g}**")
+    st.write(f"Friedman χ²({pivot.shape[1] - 1}) = **{statistic:.3f}**, p = **{format_p_value(p_value)}**")
     _interpret_p(float(p_value))
 
     pair_metadata: list[tuple[str, str, float, float]] = []
@@ -120,20 +125,23 @@ def _ranking(df: pd.DataFrame) -> None:
     summary["Grouping letters"] = [letters[str(product_name)] for product_name in summary.index]
     st.subheader("Holm-adjusted pairwise Wilcoxon comparisons")
     st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "Product 1": first,
-                    "Product 2": second,
-                    "W": pair_statistic,
-                    "Mean rank difference": mean_difference,
-                    "Adjusted p-value": adjusted_p,
-                    "Significant (5%)": adjusted_p < 0.05,
-                }
-                for (first, second, pair_statistic, mean_difference), adjusted_p in zip(
-                    pair_metadata, adjusted, strict=False
-                )
-            ]
+        with_formatted_p_values(
+            pd.DataFrame(
+                [
+                    {
+                        "Product 1": first,
+                        "Product 2": second,
+                        "W": pair_statistic,
+                        "Mean rank difference": mean_difference,
+                        "Adjusted p-value": adjusted_p,
+                        "Significant (5%)": adjusted_p < 0.05,
+                    }
+                    for (first, second, pair_statistic, mean_difference), adjusted_p in zip(
+                        pair_metadata, adjusted, strict=False
+                    )
+                ]
+            ),
+            ["Adjusted p-value"],
         ),
         width="stretch",
     )

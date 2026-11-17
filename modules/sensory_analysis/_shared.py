@@ -12,6 +12,8 @@ import streamlit as st
 from scipy import stats
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
+from modules.stat_format import format_p_value
+
 
 def _columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
     numeric = df.select_dtypes(include=np.number).columns.astype(str).tolist()
@@ -47,9 +49,9 @@ def _interpret_p(p_value: float, subject: str = "products") -> None:
     if not np.isfinite(p_value):
         st.error("The test produced an invalid (non-finite) p-value. Check the selected data.")
     elif p_value < 0.05:
-        st.success(f"Evidence of differences among {subject} (p={p_value:.4g}).")
+        st.success(f"Evidence of differences among {subject} (p={format_p_value(p_value)}).")
     else:
-        st.info(f"No statistically significant difference among {subject} (p={p_value:.4g}).")
+        st.info(f"No statistically significant difference among {subject} (p={format_p_value(p_value)}).")
 
 
 def _compact_letters(

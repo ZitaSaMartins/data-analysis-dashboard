@@ -4,6 +4,8 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
+from modules.stat_format import format_p_value
+
 from ._shared import ALPHA
 
 
@@ -152,7 +154,7 @@ def _within_group_normality(
         if not supports_normality:
             all_normal = False
         group_reports.append(
-            f"'{group_name}': {test_name} p={p_value:.4f} "
+            f"'{group_name}': {test_name} p={format_p_value(p_value)} "
             f"({'normal' if supports_normality else 'not normal'})"
         )
     return all_normal, "Within-group normality — " + "; ".join(group_reports) + "."

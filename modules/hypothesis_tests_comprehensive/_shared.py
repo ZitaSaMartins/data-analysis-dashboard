@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from modules.stat_format import format_p_value
+
 ALPHA = 0.05
 
 
@@ -35,7 +37,7 @@ def _show_statistic(
 ) -> None:
     statistic_col, p_value_col = st.columns(2)
     statistic_col.metric(statistic_label, f"{statistic:.4f}")
-    p_value_col.metric("p-value", f"{p_value:.4f}")
+    p_value_col.metric("p-value", format_p_value(p_value))
 
 
 def _require_numeric(df: pd.DataFrame, minimum: int = 1) -> list[str] | None:

@@ -4,6 +4,8 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
+from modules.stat_format import format_p_value
+
 from ._shared import _require_categorical, _show_inference
 
 
@@ -36,7 +38,7 @@ def test_chi_square(df: pd.DataFrame) -> None:
         )
         statistic_col, p_value_col, df_col = st.columns(3)
         statistic_col.metric("χ² statistic", f"{statistic:.4f}")
-        p_value_col.metric("p-value", f"{p_value:.4f}")
+        p_value_col.metric("p-value", format_p_value(p_value))
         df_col.metric("Degrees of freedom", str(degrees_freedom))
         st.markdown("**Observed counts**")
         st.dataframe(contingency, use_container_width=True)

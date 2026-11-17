@@ -4,6 +4,8 @@ import pandas as pd
 import streamlit as st
 from scipy import stats
 
+from modules.stat_format import format_p_value
+
 from ._shared import (
     _paired_columns,
     _require_categorical,
@@ -237,7 +239,7 @@ def test_mood_median(df: pd.DataFrame) -> None:
                 continue
             statistic_col, p_value_col, median_col = st.columns(3)
             statistic_col.metric("χ² statistic", f"{statistic:.4f}")
-            p_value_col.metric("p-value", f"{p_value:.4f}")
+            p_value_col.metric("p-value", format_p_value(p_value))
             median_col.metric("Grand median", f"{median:.4f}")
             st.dataframe(pd.DataFrame(contingency), use_container_width=True)
             _show_inference(
