@@ -1,4 +1,5 @@
 import hashlib
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -37,10 +38,15 @@ from modules.sidebar_navigation import (
     show_test_decision_tree,
 )
 
+# Assets
+ASSETS_DIR = Path(__file__).resolve().parent
+LOGO_PATH = ASSETS_DIR / "SciData.png"
+LOGO_SYMBOL_PATH = ASSETS_DIR / "SciData_symb.png"
+
 # Page config
 st.set_page_config(
     page_title="SciData Studio",
-    page_icon="📊",
+    page_icon=str(LOGO_SYMBOL_PATH),
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -50,15 +56,6 @@ st.markdown("""
     <style>
     /* Hide the default sidebar menu */
     [data-testid="stSidebarNav"] {display: none;}
-
-    /* Main header */
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        color: #2c3e50;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
 
     .subtitle {
         font-size: 1.1rem;
@@ -374,7 +371,9 @@ show_sidebar_status()
 
 # HOME PAGE - Welcome & status
 if st.session_state.page == "home":
-    st.markdown('<p class="main-header">📊 SciData Studio</p>', unsafe_allow_html=True)
+    logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
+    with logo_col2:
+        st.image(str(LOGO_PATH), use_container_width=True)
     st.markdown('<p class="subtitle">Your easy guide to understanding data without coding</p>', unsafe_allow_html=True)
 
     st.markdown("---")
