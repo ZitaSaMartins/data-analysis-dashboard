@@ -26,30 +26,50 @@ def test_mannwhitney(df: pd.DataFrame) -> None:
     inputs = _two_group_inputs(df, "mannwhitney")
     if inputs is None:
         return
-    variable, grouping_variable, group_1, group_2 = inputs
+    variables, grouping_variable, group_1, group_2 = inputs
     alpha = select_significance_level()
     if st.button("Run Mann-Whitney U", type="primary", key="run_mannwhitney"):
-        values_1 = df.loc[
-            df[grouping_variable] == group_1, variable
-        ].dropna().astype(float)
-        values_2 = df.loc[
-            df[grouping_variable] == group_2, variable
-        ].dropna().astype(float)
-        if not len(values_1) or not len(values_2):
-            st.error("Both groups need at least one observation.")
+        if not variables:
+            st.error("Select at least one numeric outcome variable.")
             return
-        statistic, p_value = stats.mannwhitneyu(
-            values_1,
-            values_2,
-            alternative="two-sided",
+        summary_rows: list[dict[str, object]] = []
+        for variable in variables:
+            values_1 = df.loc[
+                df[grouping_variable] == group_1, variable
+            ].dropna().astype(float)
+            values_2 = df.loc[
+                df[grouping_variable] == group_2, variable
+            ].dropna().astype(float)
+            if not len(values_1) or not len(values_2):
+                st.warning(f"'{variable}': both groups need at least one observation; skipped.")
+                continue
+            statistic, p_value = stats.mannwhitneyu(
+                values_1,
+                values_2,
+                alternative="two-sided",
+            )
+            is_significant = np.isfinite(p_value) and p_value <= alpha
+            summary_rows.append({
+                "Variable": variable,
+                "U-statistic": statistic,
+                "p-value": p_value,
+                "Interpretation": (
+                    "Group distributions differ significantly ✅"
+                    if is_significant
+                    else "No significant group-distribution difference ❌"
+                ),
+            })
+        if not summary_rows:
+            st.error("No valid Mann-Whitney results were produced.")
+            return
+        st.markdown("#### Summary")
+        st.dataframe(
+            with_formatted_p_values(pd.DataFrame(summary_rows), ["p-value"]),
+            hide_index=True,
+            width="stretch",
+            column_config={"U-statistic": st.column_config.NumberColumn(format="%.4f")},
         )
-        _show_statistic("U-statistic", statistic, p_value)
-        _show_inference(
-            p_value,
-            "The group distributions are significantly different",
-            "No significant group-distribution difference was detected",
-            alpha,
-        )
+        st.caption(f"Interpretation uses the selected significance level α = {format_alpha(alpha)}.")
 
 
 def test_wilcoxon(df: pd.DataFrame) -> None:
@@ -66,29 +86,56 @@ def test_wilcoxon(df: pd.DataFrame) -> None:
         columns = _paired_columns(df, "wilcoxon")
         if columns is None:
             return
-        first, second = columns
+        first, seconds = columns
         alpha = select_significance_level()
         if st.button("Run Wilcoxon Test", type="primary", key="run_wilcoxon_paired"):
-            paired = df[[first, second]].dropna().astype(float)
-            differences = paired[first] - paired[second]
-            if len(differences) < 2 or (differences == 0).all():
-                st.error("At least two non-identical complete pairs are required.")
+            if not seconds:
+                st.error("Select at least one second measurement.")
                 return
-            statistic, p_value = stats.wilcoxon(differences)
-            _show_statistic("W-statistic", statistic, p_value)
-            _show_inference(
-                p_value,
-                "The paired measurements are significantly different",
-                "No significant paired difference was detected",
-                alpha,
+            summary_rows: list[dict[str, object]] = []
+            for second in seconds:
+                paired = df[[first, second]].dropna().astype(float)
+                differences = paired[first] - paired[second]
+                if len(differences) < 2 or (differences == 0).all():
+                    st.warning(
+                        f"'{second}': at least two non-identical complete pairs "
+                        "are required; skipped."
+                    )
+                    continue
+                statistic, p_value = stats.wilcoxon(differences)
+                is_significant = np.isfinite(p_value) and p_value <= alpha
+                summary_rows.append({
+                    "Variable": second,
+                    "W-statistic": statistic,
+                    "p-value": p_value,
+                    "Interpretation": (
+                        f"Significantly different from {first} ✅"
+                        if is_significant
+                        else f"No significant difference from {first} ❌"
+                    ),
+                })
+            if not summary_rows:
+                st.error("No valid Wilcoxon results were produced.")
+                return
+            st.markdown("#### Summary")
+            st.dataframe(
+                with_formatted_p_values(pd.DataFrame(summary_rows), ["p-value"]),
+                hide_index=True,
+                width="stretch",
+                column_config={"W-statistic": st.column_config.NumberColumn(format="%.4f")},
+            )
+            st.caption(
+                f"Each row compares {first} to the listed variable. Interpretation "
+                f"uses the selected significance level α = {format_alpha(alpha)}."
             )
     else:
         numeric_columns = _require_numeric(df)
         if numeric_columns is None:
             return
-        variable = st.selectbox(
-            "Numeric variable:",
+        variables = st.multiselect(
+            "Numeric variable(s):",
             numeric_columns,
+            default=numeric_columns[:1],
             key="wilcoxon_one_sample_variable",
         )
         reference = st.number_input(
@@ -102,18 +149,41 @@ def test_wilcoxon(df: pd.DataFrame) -> None:
             type="primary",
             key="run_wilcoxon_one_sample",
         ):
-            differences = df[variable].dropna().astype(float) - reference
-            if len(differences) < 2 or (differences == 0).all():
-                st.error("At least two non-zero differences are required.")
+            if not variables:
+                st.error("Select at least one numeric variable.")
                 return
-            statistic, p_value = stats.wilcoxon(differences)
-            _show_statistic("W-statistic", statistic, p_value)
-            _show_inference(
-                p_value,
-                "The sample differs significantly from the reference",
-                "No significant difference from the reference was detected",
-                alpha,
+            summary_rows: list[dict[str, object]] = []
+            for variable in variables:
+                differences = df[variable].dropna().astype(float) - reference
+                if len(differences) < 2 or (differences == 0).all():
+                    st.warning(
+                        f"'{variable}': at least two non-zero differences are "
+                        "required; skipped."
+                    )
+                    continue
+                statistic, p_value = stats.wilcoxon(differences)
+                is_significant = np.isfinite(p_value) and p_value <= alpha
+                summary_rows.append({
+                    "Variable": variable,
+                    "W-statistic": statistic,
+                    "p-value": p_value,
+                    "Interpretation": (
+                        "Significantly different from the reference ✅"
+                        if is_significant
+                        else "No significant difference from the reference ❌"
+                    ),
+                })
+            if not summary_rows:
+                st.error("No valid Wilcoxon results were produced.")
+                return
+            st.markdown("#### Summary")
+            st.dataframe(
+                with_formatted_p_values(pd.DataFrame(summary_rows), ["p-value"]),
+                hide_index=True,
+                width="stretch",
+                column_config={"W-statistic": st.column_config.NumberColumn(format="%.4f")},
             )
+            st.caption(f"Interpretation uses the selected significance level α = {format_alpha(alpha)}.")
 
 
 def test_kruskal_wallis(df: pd.DataFrame) -> None:

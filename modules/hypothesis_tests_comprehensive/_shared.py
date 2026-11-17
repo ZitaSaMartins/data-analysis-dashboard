@@ -71,15 +71,16 @@ def _require_categorical(df: pd.DataFrame, minimum: int = 1) -> list[str] | None
 def _two_group_inputs(
     df: pd.DataFrame,
     key_prefix: str,
-) -> tuple[str, str, object, object] | None:
+) -> tuple[list[str], str, object, object] | None:
     numeric_columns = _require_numeric(df)
     categorical_columns = _require_categorical(df)
     if numeric_columns is None or categorical_columns is None:
         return None
 
-    numeric_variable = st.selectbox(
-        "Numeric outcome variable:",
+    numeric_variables = st.multiselect(
+        "Numeric outcome variable(s):",
         numeric_columns,
+        default=numeric_columns[:1],
         key=f"{key_prefix}_numeric",
     )
     grouping_variable = st.selectbox(
@@ -104,13 +105,13 @@ def _two_group_inputs(
         remaining_groups,
         key=f"{key_prefix}_group_2",
     )
-    return numeric_variable, grouping_variable, group_1, group_2
+    return numeric_variables, grouping_variable, group_1, group_2
 
 
 def _paired_columns(
     df: pd.DataFrame,
     key_prefix: str,
-) -> tuple[str, str] | None:
+) -> tuple[str, list[str]] | None:
     numeric_columns = _require_numeric(df, minimum=2)
     if numeric_columns is None:
         return None
@@ -121,9 +122,10 @@ def _paired_columns(
         key=f"{key_prefix}_first",
     )
     second_options = [column for column in numeric_columns if column != first]
-    second = col2.selectbox(
-        "Second measurement:",
+    second = col2.multiselect(
+        "Second measurement(s):",
         second_options,
+        default=second_options[:1],
         key=f"{key_prefix}_second",
     )
     return first, second
