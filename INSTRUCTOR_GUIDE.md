@@ -1,6 +1,6 @@
-# Instructor Guide: Using the Data Analysis Dashboard
+# Instructor Guide: Using the SciData Studio
 
-This guide helps you integrate the Data Analysis Dashboard into your curriculum and teach data analysis to students without programming background.
+This guide helps you integrate the SciData Studio into your curriculum and teach data analysis to students without programming background.
 
 ## Course Integration
 

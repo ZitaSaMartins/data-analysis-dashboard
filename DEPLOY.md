@@ -1,6 +1,6 @@
 # Deployment Guide: Streamlit Cloud (Free!)
 
-This guide walks you through deploying the Data Analysis Dashboard to **Streamlit Cloud** with zero cost.
+This guide walks you through deploying the  to **Streamlit Cloud** with zero cost.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ git config user.email "your.email@gmail.com"
 2. Add all files:
 ```bash
 git add .
-git commit -m "Initial commit: Data Analysis Dashboard"
+git commit -m "Initial commit: SciData Studio"
 ```
 
 3. Add GitHub remote:
@@ -189,7 +189,7 @@ git remote add origin https://github.com/myusername/data-analysis-dashboard.git
 
 # 2. First push
 git add .
-git commit -m "Initial: Data Analysis Dashboard"
+git commit -m "Initial: SciData Studio"
 git push -u origin main
 
 # 3. Deploy to Streamlit Cloud

@@ -1,5 +1,5 @@
 """Generates synthetic CSV datasets that exercise every analysis page in the
-Data Analysis Dashboard (general statistics + the full Sensory Analysis suite).
+SciData Studio (general statistics + the full Sensory Analysis suite).
 
 Each dataset is built with a real, intentional effect baked in (a group
 difference, a correlation, a product preference, etc.) so that running the

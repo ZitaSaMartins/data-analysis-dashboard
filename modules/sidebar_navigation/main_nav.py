@@ -50,13 +50,13 @@ def _render_relationships() -> None:
             "nonparametric_mannwhitney",
         },
     ):
-        st.markdown("**Parametric (assumes normal distribution)**")
+        st.markdown("**Parametric**")
         _nav_button(
             "🟦 Independent t-test",
             "parametric_ttest_independent",
             "sidebar_independent_ttest",
         )
-        st.markdown("**Non-Parametric (no normality assumption)**")
+        st.markdown("**Non-Parametric**")
         _nav_button(
             "🟧 Mann-Whitney U",
             "nonparametric_mannwhitney",

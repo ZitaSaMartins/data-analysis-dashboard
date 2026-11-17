@@ -1,4 +1,4 @@
-# 📊 Data Analysis Dashboard
+# 📊 SciData Studio
 
 A free, no-code/low-code web application for data analysis, hypothesis testing, machine learning, and sensory analysis. Built with Streamlit and designed for students and researchers without programming experience.
 
@@ -167,7 +167,7 @@ glue and aren't unit-tested directly.
 ### Step 1: Push to GitHub
 ```bash
 git add .
-git commit -m "Initial commit: Data Analysis Dashboard"
+git commit -m "Initial commit: Data Analysis SciData Studio"
 git push origin main
 ```
 

@@ -39,7 +39,7 @@ from modules.sidebar_navigation import (
 
 # Page config
 st.set_page_config(
-    page_title="Data Analysis Dashboard",
+    page_title="SciData Studio",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -374,7 +374,7 @@ show_sidebar_status()
 
 # HOME PAGE - Welcome & status
 if st.session_state.page == "home":
-    st.markdown('<p class="main-header">📊 Data Analysis Dashboard</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">📊 SciData Studio</p>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Your easy guide to understanding data without coding</p>', unsafe_allow_html=True)
 
     st.markdown("---")
@@ -1067,7 +1067,7 @@ elif st.session_state.page == "help_choose_tests":
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #999; font-size: 0.85rem;'>
-    <p>Data Analysis Dashboard • No coding required • Your data stays private</p>
+    <p>SciData Studio • No coding required • Your data stays private</p>
     <p style='font-size: 0.75rem;'>Built with Streamlit • Open source • Free to use</p>
 </div>
 """, unsafe_allow_html=True)
