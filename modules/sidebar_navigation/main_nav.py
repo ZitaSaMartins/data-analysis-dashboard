@@ -7,7 +7,7 @@ stacking every section's menu at once.
 
 import streamlit as st
 
-from ._shared import _active_section, _nav_button
+from ._shared import _active_section, _nav_button, icon_data_uri
 from .page_sets import SECTIONS
 
 
@@ -301,5 +301,15 @@ def build_main_navigation() -> None:
     active_section = _active_section(SECTIONS)
 
     with st.sidebar:
-        st.markdown(f"## {active_section['icon']} {active_section['label']}")
+        icon_uri = icon_data_uri(active_section["icon"])
+        icon_html = (
+            f'<img src="{icon_uri}" width="32" height="32" '
+            'style="vertical-align:middle;margin-right:0.5rem;">'
+            if icon_uri
+            else ""
+        )
+        st.markdown(
+            f"<h2>{icon_html}{active_section['label']}</h2>",
+            unsafe_allow_html=True,
+        )
         _SECTION_RENDERERS[active_section["id"]]()

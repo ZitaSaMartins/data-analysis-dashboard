@@ -1,8 +1,23 @@
 """Shared navigation primitives: page switching and active-state helpers."""
 
+import base64
 from collections.abc import Iterable
+from functools import cache
+from pathlib import Path
 
 import streamlit as st
+
+IMAGES_DIR = Path(__file__).resolve().parent.parent.parent / "images"
+
+
+@cache
+def icon_data_uri(filename: str) -> str:
+    """Return a data URI for an SVG in ``images/`` (empty string if missing)."""
+    path = IMAGES_DIR / filename
+    if not path.is_file():
+        return ""
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
 
 
 def _navigate(page: str) -> None:

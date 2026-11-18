@@ -249,7 +249,7 @@ Example:
 **Project: Sensory Evaluation Study**
 - Groups collect sensory data from classmates
 - Upload to dashboard
-- Analyze descriptive sensory profiles
+- Analyse descriptive sensory profiles
 - Compare products
 - Present findings
 - Grading: Data quality + analysis + presentation

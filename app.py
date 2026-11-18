@@ -39,7 +39,7 @@ from modules.sidebar_navigation import (
 )
 
 # Assets
-ASSETS_DIR = Path(__file__).resolve().parent
+ASSETS_DIR = Path(__file__).resolve().parent / "images"
 LOGO_PATH = ASSETS_DIR / "SciData.png"
 LOGO_SYMBOL_PATH = ASSETS_DIR / "SciData_symb.png"
 
@@ -50,6 +50,16 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ➕ ADD FONT AWESOME
+st.markdown("""
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    .fa-icon {
+        margin-right: 0.5rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Custom styling - Clean, student-friendly interface
 st.markdown("""
@@ -385,11 +395,11 @@ if st.session_state.page == "home":
     st.markdown("### 🗺️ How it works")
     st.markdown("""
     Use the **menu in the sidebar** to navigate between steps:
-    1. **Upload & Prepare** — Upload Data, Check Data Quality, then Rename Variables
-    2. **Explore** — Choose a chart category to explore patterns and relationships
-    3. **Statistical Inference** — Check assumptions, review Suggested Analysis, then choose a test
-    4. **Sensory** — Open the independent Sensory Analysis module when needed
-    5. **Advanced** — Build Predictions, Get Recommendations
+    1. **Prepare Data** — Upload Data, Check Data Quality, then Rename Variables
+    2. **Explore Data** — Choose variables to explore patterns and relationships
+    3. **Analyse Data** — Check assumptions, review Suggested Analysis, then choose a test
+    4. **Sensory Analysis** — Open the independent Sensory Analysis module when needed
+    5. **Advanced Analysis** — Build Predictions, Get Recommendations
     6. **Help** — Getting Started, Analysis Types, and How to Choose Tests guides
     """)
 
@@ -622,7 +632,7 @@ elif st.session_state.page == "validate":
                 "Select Dependent Variables (Target/Response):",
                 options=[col for col in df.columns if col not in independent_vars],
                 key="dependent_vars",
-                help="Variables you want to predict or analyze"
+                help="Variables you want to predict or analyse"
             )
 
         if dependent_vars and independent_vars:
@@ -644,7 +654,7 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
 
         df = st.session_state.df
 
-        st.markdown("### Select Variables to Analyze")
+        st.markdown("### Select Variables to Analyse")
         if "eda_independent_selection" not in st.session_state:
             st.session_state.eda_independent_selection = list(
                 st.session_state.get(
@@ -693,13 +703,13 @@ elif st.session_state.page in EDA_PAGE_CATEGORIES:
                 options=[c for c in df.columns if c not in eda_independent],
                 key="_eda_dependent_vars",
                 on_change=store_eda_dependent_selection,
-                help="Variables you want to predict or analyze"
+                help="Variables you want to predict or analyse"
             )
 
         eda_vars = eda_dependent + [v for v in eda_independent if v not in eda_dependent]
 
         if not eda_vars:
-            st.info("👆 Select at least one dependent or independent variable to analyze")
+            st.info("👆 Select at least one dependent or independent variable to analyse")
         else:
             with st.expander("🎨 Chart Settings", expanded=False):
                 s1, s2, s3 = st.columns(3)

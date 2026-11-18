@@ -71,9 +71,9 @@ A free, no-code/low-code web application for data analysis, hypothesis testing, 
 
 ✅ **Top Bar + Contextual Sidebar Navigation**
 - A horizontal top bar switches between Home, Prepare Data, Explore Data,
-  Analyze Relationships, Sensory Analysis, Advanced Analysis, and Help
+  Analyse Relationships, Sensory Analysis, Advanced Analysis, and Help
 - The sidebar only shows the submenu for the active section, keeping it short;
-  deeper sub-menus (e.g. within Analyze Relationships or Sensory Analysis)
+  deeper sub-menus (e.g. within Analyse Relationships or Sensory Analysis)
   automatically reopen around the active page
 - Returning to a section resumes the last page you viewed within it
 - The sidebar always shows the uploaded filename and dataset dimensions
@@ -220,7 +220,7 @@ Give them the Streamlit Cloud URL (looks like: `https://your-username-data-analy
    - Generate the analysis, then fine-tune colors/titles per chart
 
 5. **Statistical Inference**
-   - Open **Analyze Relationships** and run Test Distribution and Test Variance
+   - Open **Analyse Relationships** and run Test Distribution and Test Variance
      when the test you plan to use requires those assumptions
    - Open **Suggested Analysis** to combine the matching results and review the
      recommended parametric, adjusted-parametric, or non-parametric path
@@ -436,7 +436,7 @@ For questions or issues:
 
 ### v1.1
 - Redesigned navigation with Home and six collapsible sections: Prepare Data,
-  Explore Data, Analyze Relationships, Sensory Analysis, Advanced Analysis,
+  Explore Data, Analyse Relationships, Sensory Analysis, Advanced Analysis,
   and Help
 - New Rename Variables page (Prepare section) with full Unicode/special-character
   support, propagated automatically to variable-role selections, EDA, and ML

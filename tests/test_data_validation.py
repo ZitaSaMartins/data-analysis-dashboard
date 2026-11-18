@@ -3,7 +3,7 @@
 import pandas as pd
 
 from modules.data_validation import (
-    analyze_variable_types,
+    analyse_variable_types,
     generate_validation_report,
     get_statistical_summary,
     validate_dataset,
@@ -49,7 +49,7 @@ def test_generate_validation_report_includes_row_and_column_counts():
     assert "Total Columns: 2" in report
 
 
-def test_analyze_variable_types_classifies_binary_continuous_categorical():
+def test_analyse_variable_types_classifies_binary_continuous_categorical():
     df = pd.DataFrame(
         {
             "flag": [0, 1] * 15,
@@ -57,7 +57,7 @@ def test_analyze_variable_types_classifies_binary_continuous_categorical():
             "category": ["a", "b", "c"] * 10,
         }
     )
-    result = analyze_variable_types(df)
+    result = analyse_variable_types(df)
     assert "flag" in result["binary"]
     assert "score" in result["continuous"]
     assert "category" in result["categorical"]

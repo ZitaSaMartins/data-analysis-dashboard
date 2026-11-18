@@ -7,7 +7,7 @@ def recommend_models(analysis_type: str, df: pd.DataFrame, characteristics: list
     Uses an expert system approach (no API calls, completely free).
     """
 
-    # Analyze dataset
+    # Analyse dataset
     n_samples = len(df)
     n_features = len(df.columns)
 

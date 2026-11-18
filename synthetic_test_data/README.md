@@ -17,7 +17,7 @@ python scripts/generate_sample_data.py
 ### `student_performance_demo.csv` (500 rows)
 Student exam-performance data covering **Explore Data** (distributions,
 correlations, comparisons, hierarchical, temporal) and most of
-**Analyze Relationships**, plus **Advanced Analysis**.
+**Analyse Data**, plus **Advanced Analysis**.
 
 | Page | Columns to pick |
 |---|---|

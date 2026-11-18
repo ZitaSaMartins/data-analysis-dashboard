@@ -115,7 +115,7 @@ def generate_validation_report(df: pd.DataFrame) -> str:
     return report
 
 
-def analyze_variable_types(df: pd.DataFrame) -> dict[str, list[str]]:
+def analyse_variable_types(df: pd.DataFrame) -> dict[str, list[str]]:
     """
     Automatically classify variables as continuous, categorical, or binary.
     Helps students understand which variables are dependent vs independent.
