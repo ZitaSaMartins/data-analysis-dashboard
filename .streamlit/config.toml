@@ -1,20 +1,33 @@
 [theme]
-primaryColor = "#00254E"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#C7DCE5"
-textColor = "#565651"
-borderColor = "#8DB2D9"
-linkColor = "#4E6D93"
-blueColor = "#4E6D93"
-greenColor = "#7BD9B0"
-yellowColor = "#FFBF3E"
-grayColor = "#565651"
+# Primary colors from the logo
+primaryColor = "#00254E"              # Dark navy (main)
+backgroundColor = "#FFFFFF"           # White background
+secondaryBackgroundColor = "#E6F3F8"  # Very light blue-teal
+textColor = "#00254E"                 # Dark navy text
+borderColor = "#17A999"               # Teal accent (matches logo)
+linkColor = "#17A999"                 # Teal for links
 
-chartCategoricalColors = ["#00254E", "#4E6D93", "#8DB2D9", "#7BD9B0", "#FFBF3E", "#565651", "#C7DCE5"]
+# Accent colors from logo
+blueColor = "#00254E"                 # Dark navy
+greenColor = "#2DB87F"                # Green from logo
+tealColor = "#17A999"                 # Teal from logo
+yellowColor = "#FFBF3E"               # Yellow/gold accent
+grayColor = "#565651"                 # Dark gray for muted text
+
+# Chart colors - full palette from logo
+chartCategoricalColors = [
+    "#00254E",    # Dark navy (primary)
+    "#17A999",    # Teal
+    "#2DB87F",    # Green
+    "#FFBF3E",    # Yellow
+    "#4E6D93",    # Medium blue
+    "#8DB2D9",    # Light blue
+    "#C7DCE5"     # Very light blue
+]
 
 [theme.sidebar]
-backgroundColor = "#00254E"
-secondaryBackgroundColor = "#4E6D93"
-textColor = "#C7DCE5"
-primaryColor = "#FFBF3E"
-borderColor = "#4E6D93"
+backgroundColor = "#00254E"           # Dark navy background
+secondaryBackgroundColor = "#1A3A5C"  # Slightly lighter navy
+textColor = "#C7DCE5"                 # Light text
+primaryColor = "#FFBF3E"              # Yellow highlight
+borderColor = "#17A999"               # Teal borders
